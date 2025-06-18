@@ -24,6 +24,7 @@ The system uses UTXO-style shielded notes and a Merkle tree of commitments to re
 * **Stealth Address**: A public key generated from a user's secret key for receiving shielded notes.
 * **Circuit**: A zero-knowledge circuit proving correctness of a spend or deposit without revealing inputs.
 * **Ciphertext**: Encrypted note metadata sent alongside a commitment, enabling receivers to detect incoming notes.
+* **Relay**: A third-party actor that broadcasts user-generated transactions to Solana on their behalf. Relays prevent the user’s public key from appearing on-chain, preserving sender anonymity. They may charge a small relay fee, embedded in the transaction logic and proven inside the zk circuit.
 
 ---
 
@@ -36,12 +37,22 @@ The system uses UTXO-style shielded notes and a Merkle tree of commitments to re
 * Maintains a set of used nullifiers to prevent double-spending
 * Handles deposits, withdrawals, and internal shielded transfers
 * Emits ciphertexts (encrypted note data) for receivers
+* Validates that the output includes a relay fee (if declared)
+* Can optionally restrict direct user submission to force relay usage (configurable)
 
 ### Off-chain Components
 
-* Wallet for note generation, zk proof generation, and transaction signing
-* Note scanner that listens for ciphertexts and decrypts them using the user's viewing key
-
+* **Wallet**
+    * note generation, zk proof generation, and transaction signing
+    * Note scanner that listens for ciphertexts and decrypts them using the user's viewing key
+* **Relay node**
+    * Broadcasts transactions for users
+    * Collects predefined fee
+    Security Considerations
+#### Security considerations
+* Relay trust model:
+    * Users don’t need to trust relays with funds or keys — only with liveness
+    * Worst-case: relay censors or delays a tx (user can retry with another)
 ---
 
 ## Workflow
