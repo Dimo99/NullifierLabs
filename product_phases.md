@@ -1,5 +1,4 @@
-# Product Roadmap – Private Mixer Protocol on Solana
-
+# Product Roadmap – Cipherpay
 ---
 
 ## **Product 0 — Basic Shielded Transactions**

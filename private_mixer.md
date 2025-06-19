@@ -1,4 +1,4 @@
-# Private Mixer Protocol on Solana - Technical Specification
+# Cipherpay - Technical Specification
 
 ## Overview
 
