@@ -1,5 +1,5 @@
 import { randomBigInt, buildPoseidon, randomBit } from '../common';
-import { CircuitTestRunner } from '../circuit-test-runner';
+import { CircuitTestRunner, CircuitTestConfig, CircuitTestCase } from '../circuit-test-runner';
 import * as path from 'path';
 
 // Use absolute paths
@@ -99,12 +99,10 @@ function verifyWithdrawPublicInputs(publicJson: any[], expected: WithdrawExpecte
     console.log('✅ Public inputs verification passed!');
 }
 
-async function main() {
-    const runner = new CircuitTestRunner(SCRIPT_DIR);
-
-    await runner.runCircuitTest({
-        circuitName: 'test_withdraw',
-        outputDir: OUTPUT_DIR,
+// Generate withdraw test case
+function generateWithdrawTest(): CircuitTestCase {
+    return {
+        name: "Valid Withdraw Transaction",
         inputGenerator: async () => {
             // Build Poseidon
             const poseidon = await buildPoseidon();
@@ -196,7 +194,21 @@ async function main() {
         },
         witnessVerifier: verifyWithdrawOutputs,
         publicInputsVerifier: verifyWithdrawPublicInputs
-    });
+    };
+}
+
+async function main() {
+    const runner = new CircuitTestRunner(SCRIPT_DIR);
+
+    const config: CircuitTestConfig = {
+        circuitName: 'test_withdraw',
+        outputDir: OUTPUT_DIR,
+        testCases: [
+            generateWithdrawTest()
+        ]
+    };
+
+    await runner.runTests(config);
 }
 
 main().catch(e => { 

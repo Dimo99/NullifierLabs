@@ -1,5 +1,5 @@
 import { randomBigInt, buildPoseidon } from '../common';
-import { CircuitTestRunner } from '../circuit-test-runner';
+import { CircuitTestRunner, CircuitTestConfig, CircuitTestCase } from '../circuit-test-runner';
 import * as path from 'path';
 
 // Use absolute paths
@@ -31,12 +31,10 @@ function verifyNullifierPublicInputs(publicJson: any[], expectedNullifier: strin
     console.log('✅ Public input verification passed!');
 }
 
-async function main() {
-    const runner = new CircuitTestRunner(SCRIPT_DIR);
-
-    await runner.runCircuitTest({
-        circuitName: 'test_nullifier',
-        outputDir: OUTPUT_DIR,
+// Generate nullifier test case
+function generateNullifierTest(): CircuitTestCase {
+    return {
+        name: "Valid Nullifier Generation",
         inputGenerator: async () => {
             // Generate random inputs
             const secret_key = randomBigInt(31);
@@ -61,7 +59,21 @@ async function main() {
         },
         witnessVerifier: verifyNullifier,
         publicInputsVerifier: verifyNullifierPublicInputs
-    });
+    };
+}
+
+async function main() {
+    const runner = new CircuitTestRunner(SCRIPT_DIR);
+
+    const config: CircuitTestConfig = {
+        circuitName: 'test_nullifier',
+        outputDir: OUTPUT_DIR,
+        testCases: [
+            generateNullifierTest()
+        ]
+    };
+
+    await runner.runTests(config);
 }
 
 main().catch(e => { 

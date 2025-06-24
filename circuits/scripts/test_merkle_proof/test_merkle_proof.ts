@@ -1,5 +1,5 @@
 import { randomBigInt, buildPoseidon, randomBit } from '../common';
-import { CircuitTestRunner } from '../circuit-test-runner';
+import { CircuitTestRunner, CircuitTestConfig, CircuitTestCase } from '../circuit-test-runner';
 import * as path from 'path';
 
 // Use absolute paths
@@ -32,48 +32,64 @@ function verifyMerkleProofPublicInputs(publicJson: any[], expectedIsValid: numbe
     console.log('✅ Public input verification passed!');
 }
 
-async function main() {
-    const runner = new CircuitTestRunner(SCRIPT_DIR);
+// Helper function to generate merkle proof data
+async function generateMerkleProofData(useCorrectRoot: boolean = true): Promise<{
+    input: any;
+    expected: number;
+    computedRoot: string;
+}> {
+    // Build Poseidon
+    const poseidon = await buildPoseidon();
 
-    await runner.runCircuitTest({
-        circuitName: 'test_merkle_proof',
-        outputDir: OUTPUT_DIR,
+    // Generate a random leaf
+    const leaf = randomBigInt(31);
+
+    // Generate random Merkle path
+    const path_elements: bigint[] = [];
+    const path_indices: number[] = [];
+    let cur = leaf;
+    
+    for (let i = 0; i < MERKLE_DEPTH; i++) {
+        path_elements.push(randomBigInt(31));
+        path_indices.push(randomBit());
+        
+        let left: bigint, right: bigint;
+        if (path_indices[i] === 0) {
+            left = cur;
+            right = path_elements[i];
+        } else {
+            left = path_elements[i];
+            right = cur;
+        }
+        cur = poseidon.F.toObject(poseidon([left, right]));
+    }
+    const computedRoot = cur;
+
+    // Use either the correct root or a random incorrect one
+    const root = useCorrectRoot ? computedRoot : randomBigInt(31);
+    const expected = useCorrectRoot ? 1 : 0;
+
+    const input = {
+        leaf: leaf.toString(),
+        root: root.toString(),
+        path_elements: path_elements.map(x => x.toString()),
+        path_indices: path_indices,
+    };
+
+    return {
+        input,
+        expected,
+        computedRoot: computedRoot.toString()
+    };
+}
+
+// Generate valid merkle proof test case
+async function generateValidMerkleProofTest(): Promise<CircuitTestCase> {
+    return {
+        name: "Valid Merkle Proof",
         inputGenerator: async () => {
-            // Build Poseidon
-            const poseidon = await buildPoseidon();
-
-            // Generate a random leaf
-            const leaf = randomBigInt(31);
-
-            // Generate random Merkle path
-            const path_elements: bigint[] = [];
-            const path_indices: number[] = [];
-            let cur = leaf;
-            
-            for (let i = 0; i < MERKLE_DEPTH; i++) {
-                path_elements.push(randomBigInt(31));
-                path_indices.push(randomBit());
-                
-                let left: bigint, right: bigint;
-                if (path_indices[i] === 0) {
-                    left = cur;
-                    right = path_elements[i];
-                } else {
-                    left = path_elements[i];
-                    right = cur;
-                }
-                cur = poseidon.F.toObject(poseidon([left, right]));
-            }
-            const root = cur;
-
-            const input = {
-                leaf: leaf.toString(),
-                root: root.toString(),
-                path_elements: path_elements.map(x => x.toString()),
-                path_indices: path_indices,
-            };
-
-            return { input, expected: 1 }; // Expected is_valid = 1
+            const { input, expected } = await generateMerkleProofData(true);
+            return { input, expected };
         },
         logInputs: (input, expected) => {
             console.log('📝 Test inputs:');
@@ -85,7 +101,44 @@ async function main() {
         },
         witnessVerifier: verifyMerkleProof,
         publicInputsVerifier: verifyMerkleProofPublicInputs
-    });
+    };
+}
+
+// Generate invalid merkle proof test case
+async function generateInvalidMerkleProofTest(): Promise<CircuitTestCase> {
+    return {
+        name: "Invalid Merkle Proof",
+        inputGenerator: async () => {
+            const { input, expected, computedRoot } = await generateMerkleProofData(false);
+            return { input, expected };
+        },
+        logInputs: (input, expected) => {
+            console.log('📝 Test inputs (Invalid proof):');
+            console.log(`  Leaf: ${input.leaf}`);
+            console.log(`  Root: ${input.root} (incorrect)`);
+            console.log(`  Path elements: ${input.path_elements.length} elements`);
+            console.log(`  Path indices: [${input.path_indices.join(', ')}]`);
+            console.log(`  Expected is_valid: ${expected} (should be invalid)\n`);
+        },
+        witnessVerifier: verifyMerkleProof,
+        publicInputsVerifier: verifyMerkleProofPublicInputs
+    };
+}
+
+async function main() {
+    const runner = new CircuitTestRunner(SCRIPT_DIR);
+
+    // Create test configuration with multiple test cases
+    const config: CircuitTestConfig = {
+        circuitName: 'test_merkle_proof',
+        outputDir: OUTPUT_DIR,
+        testCases: [
+            await generateValidMerkleProofTest(),
+            await generateInvalidMerkleProofTest()
+        ]
+    };
+
+    await runner.runTests(config);
 }
 
 main().catch(e => { 

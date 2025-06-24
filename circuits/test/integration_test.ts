@@ -1,218 +1,285 @@
-import { time, run } from '../scripts/common';
-import * as fs from 'fs';
+import { CircuitTestRunner, CircuitTestConfig } from '../scripts/circuit-test-runner';
 import * as path from 'path';
+import * as fs from 'fs';
 
-interface TestResult {
-    name: string;
-    success: boolean;
+interface TestSuiteResult {
+    suiteName: string;
+    testCases: number;
+    passed: number;
+    failed: number;
     duration: number;
-    error?: string;
+    errors: { caseName: string; error: string }[];
 }
 
-interface PipelineConfig {
-    scriptName: string;
-    outputDirName: string;
-    requiredFiles: string[];
-    verifyProof?: boolean;
-    customVerification?: (outputDir: string) => void;
-}
+class IntegrationTestRunner {
+    private results: TestSuiteResult[] = [];
+    private startTime: number = 0;
 
-class CircuitTestRunner {
-    private results: TestResult[] = [];
-    private baseDir = path.resolve(__dirname, '../scripts/outputs');
-
-    async runTest(name: string, testFn: () => Promise<void>): Promise<void> {
-        const start = Date.now();
-        try {
-            await time(`Running ${name}`, testFn);
-            this.results.push({
-                name,
-                success: true,
-                duration: Date.now() - start
-            });
-            console.log(`✅ ${name} passed`);
-        } catch (error) {
-            this.results.push({
-                name,
-                success: false,
-                duration: Date.now() - start,
-                error: error instanceof Error ? error.message : String(error)
-            });
-            console.log(`❌ ${name} failed:`, error);
-        }
-    }
-
-    private async runPipelineTest(config: PipelineConfig): Promise<void> {
-        const testDir = path.join(__dirname, `../scripts/${config.scriptName}`);
-        const outputDir = path.join(this.baseDir, config.outputDirName);
+    async runTestSuite(suiteName: string, scriptPath: string): Promise<void> {
+        console.log(`\n🏃 Running test suite: ${suiteName}`);
+        console.log('='.repeat(60));
         
-        // Clean previous outputs
-        if (fs.existsSync(outputDir)) {
-            fs.rmSync(outputDir, { recursive: true });
-        }
-
-        // Run the full pipeline
-        const { execSync } = require('child_process');
-        execSync(`npx ts-node ${config.scriptName}.ts`, { 
-            cwd: testDir, 
-            stdio: 'inherit' 
-        });
-
-        // Verify outputs exist
-        for (const file of config.requiredFiles) {
-            const filePath = path.join(outputDir, file);
-            if (!fs.existsSync(filePath)) {
-                throw new Error(`Required file ${file} not found at ${filePath}`);
+        const suiteStart = Date.now();
+        const errors: { caseName: string; error: string }[] = [];
+        let passed = 0;
+        let failed = 0;
+        
+        try {
+            // Import the test module dynamically
+            const testModule = require(scriptPath);
+            
+            // Get the config from the module (if exported) or run the test
+            let configPromise: Promise<CircuitTestConfig>;
+            
+            if (testModule.getConfig) {
+                // If the module exports a getConfig function
+                configPromise = testModule.getConfig();
+            } else {
+                // Otherwise, capture the config by mocking CircuitTestRunner
+                configPromise = new Promise((resolve, reject) => {
+                    const originalRunTests = CircuitTestRunner.prototype.runTests;
+                    CircuitTestRunner.prototype.runTests = async function(config: CircuitTestConfig) {
+                        resolve(config);
+                        // Restore original method
+                        CircuitTestRunner.prototype.runTests = originalRunTests;
+                        // Actually run the tests
+                        return originalRunTests.call(this, config);
+                    };
+                    
+                    // Run the module's main function if it exists
+                    if (testModule.main) {
+                        testModule.main().catch(reject);
+                    } else {
+                        // The module should run automatically when imported
+                        setTimeout(() => reject(new Error('No config captured')), 100);
+                    }
+                });
             }
-        }
-
-        // Verify proof structure if requested
-        if (config.verifyProof) {
-            const proofJson = JSON.parse(fs.readFileSync(path.join(outputDir, 'proof.json'), 'utf8'));
-            if (!proofJson.pi_a || !proofJson.pi_b || !proofJson.pi_c) {
-                throw new Error('Invalid proof structure generated');
-            }
-        }
-
-        // Run custom verification if provided
-        if (config.customVerification) {
-            config.customVerification(outputDir);
-        }
-    }
-
-    async testNullifierPipeline(): Promise<void> {
-        await this.runPipelineTest({
-            scriptName: 'test_nullifier',
-            outputDirName: 'nullifier',
-            requiredFiles: [
-                'input.json',
-                'test_nullifier.r1cs',
-                'test_nullifier_js/test_nullifier.wasm',
-                'witness.wtns',
-                'proof.json',
-                'verification_key.json'
-            ],
-            verifyProof: true
-        });
-    }
-
-    async testWithdrawPipeline(): Promise<void> {
-        await this.runPipelineTest({
-            scriptName: 'test_withdraw',
-            outputDirName: 'withdraw',
-            requiredFiles: [
-                'input.json',
-                'test_withdraw.r1cs',
-                'test_withdraw_js/test_withdraw.wasm',
-                'witness.wtns',
-                'proof.json',
-                'verification_key.json',
-                'public.json'
-            ],
-            verifyProof: true
-        });
-    }
-
-    async testMerkleProofPipeline(): Promise<void> {
-        await this.runPipelineTest({
-            scriptName: 'test_merkle_proof',
-            outputDirName: 'merkle_proof',
-            requiredFiles: [
-                'input.json',
-                'test_merkle_proof.r1cs',
-                'test_merkle_proof_js/test_merkle_proof.wasm',
-                'witness.wtns',
-                'proof.json',
-                'verification_key.json',
-                'public.json'
-            ],
-            verifyProof: true,
-            customVerification: (outputDir: string) => {
-                // Verify public input shows valid merkle proof
-                const publicJson = JSON.parse(fs.readFileSync(path.join(outputDir, 'public.json'), 'utf8'));
-                if (publicJson[0] !== "1") {
-                    throw new Error(`Merkle proof validation failed. Expected: 1, Got: ${publicJson[0]}`);
+            
+            const config = await configPromise;
+            
+            // Run the actual tests using CircuitTestRunner
+            const runner = new CircuitTestRunner(path.dirname(scriptPath));
+            
+            // Track results for each test case
+            for (let i = 0; i < config.testCases.length; i++) {
+                const testCase = config.testCases[i];
+                try {
+                    // Create a temporary runner to test individual cases
+                    const singleCaseConfig: CircuitTestConfig = {
+                        circuitName: config.circuitName,
+                        outputDir: config.outputDir,
+                        testCases: [testCase]
+                    };
+                    
+                    await runner.runTests(singleCaseConfig);
+                    passed++;
+                } catch (error) {
+                    failed++;
+                    errors.push({
+                        caseName: testCase.name,
+                        error: error instanceof Error ? error.message : String(error)
+                    });
                 }
             }
-        });
-    }
-
-    async testNoteCommitmentPipeline(): Promise<void> {
-        await this.runPipelineTest({
-            scriptName: 'test_note_commitment',
-            outputDirName: 'note_commitment',
-            requiredFiles: [
-                'input.json',
-                'test_note_commitment.r1cs',
-                'test_note_commitment_js/test_note_commitment.wasm',
-                'witness.wtns',
-                'proof.json',
-                'verification_key.json',
-                'public.json'
-            ],
-            verifyProof: true,
-            customVerification: (outputDir: string) => {
-                // Verify public input contains the commitment
-                const publicJson = JSON.parse(fs.readFileSync(path.join(outputDir, 'public.json'), 'utf8'));
-                if (!publicJson[0] || publicJson[0] === "0") {
-                    throw new Error(`Note commitment validation failed. Got: ${publicJson[0]}`);
-                }
-            }
-        });
+            
+            this.results.push({
+                suiteName,
+                testCases: config.testCases.length,
+                passed,
+                failed,
+                duration: Date.now() - suiteStart,
+                errors
+            });
+            
+        } catch (error) {
+            // If we couldn't even load the test suite
+            this.results.push({
+                suiteName,
+                testCases: 0,
+                passed: 0,
+                failed: 1,
+                duration: Date.now() - suiteStart,
+                errors: [{
+                    caseName: 'Suite Loading',
+                    error: error instanceof Error ? error.message : String(error)
+                }]
+            });
+        }
     }
 
     async runAllTests(): Promise<void> {
+        this.startTime = Date.now();
         console.log("🚀 Starting integration tests...\n");
 
-        await this.runTest("Nullifier Full Pipeline", () => this.testNullifierPipeline());
-        await this.runTest("Note Commitment Full Pipeline", () => this.testNoteCommitmentPipeline());
-        await this.runTest("Withdraw Full Pipeline", () => this.testWithdrawPipeline());
-        await this.runTest("Merkle Proof Full Pipeline", () => this.testMerkleProofPipeline());
+        // Define test suites
+        const testSuites = [
+            {
+                name: 'Nullifier Circuit',
+                path: path.resolve(__dirname, '../scripts/test_nullifier/test_nullifier.ts')
+            },
+            {
+                name: 'Note Commitment Circuit',
+                path: path.resolve(__dirname, '../scripts/test_note_commitment/test_note_commitment.ts')
+            },
+            {
+                name: 'Withdraw Circuit',
+                path: path.resolve(__dirname, '../scripts/test_withdraw/test_withdraw.ts')
+            },
+            {
+                name: 'Merkle Proof Circuit',
+                path: path.resolve(__dirname, '../scripts/test_merkle_proof/test_merkle_proof.ts')
+            }
+        ];
+
+        // Run each test suite
+        for (const suite of testSuites) {
+            if (fs.existsSync(suite.path)) {
+                await this.runTestSuite(suite.name, suite.path);
+            } else {
+                console.log(`⚠️  Skipping ${suite.name} - test file not found at ${suite.path}`);
+            }
+        }
 
         this.printResults();
     }
 
     private printResults(): void {
-        console.log("\n📊 Test Results:");
-        console.log("=".repeat(50));
+        const totalDuration = Date.now() - this.startTime;
         
-        let passed = 0;
-        let failed = 0;
-        let totalTime = 0;
+        console.log("\n\n📊 Integration Test Results");
+        console.log("=".repeat(60));
+        
+        let totalSuites = 0;
+        let totalTestCases = 0;
+        let totalPassed = 0;
+        let totalFailed = 0;
 
+        // Print details for each suite
         for (const result of this.results) {
-            const status = result.success ? "✅ PASS" : "❌ FAIL";
-            console.log(`${status} ${result.name} (${result.duration}ms)`);
+            totalSuites++;
+            totalTestCases += result.testCases;
+            totalPassed += result.passed;
+            totalFailed += result.failed;
             
-            if (result.success) {
-                passed++;
-            } else {
-                failed++;
-                console.log(`   Error: ${result.error}`);
+            const status = result.failed === 0 ? "✅" : "❌";
+            console.log(`\n${status} ${result.suiteName}`);
+            console.log(`   Test cases: ${result.testCases}`);
+            console.log(`   Passed: ${result.passed}`);
+            console.log(`   Failed: ${result.failed}`);
+            console.log(`   Duration: ${result.duration}ms`);
+            
+            // Print errors if any
+            if (result.errors.length > 0) {
+                console.log(`   Errors:`);
+                for (const error of result.errors) {
+                    console.log(`     - ${error.caseName}: ${error.error}`);
+                }
             }
-            
-            totalTime += result.duration;
         }
 
-        console.log("=".repeat(50));
-        console.log(`Total: ${this.results.length} tests`);
-        console.log(`Passed: ${passed}`);
-        console.log(`Failed: ${failed}`);
-        console.log(`Total time: ${totalTime}ms`);
+        // Print summary
+        console.log("\n" + "=".repeat(60));
+        console.log("📈 Summary:");
+        console.log(`   Test Suites: ${totalSuites}`);
+        console.log(`   Test Cases: ${totalTestCases}`);
+        console.log(`   Passed: ${totalPassed}`);
+        console.log(`   Failed: ${totalFailed}`);
+        console.log(`   Total Duration: ${totalDuration}ms`);
+        console.log("=".repeat(60));
 
-        if (failed > 0) {
+        // Exit with error code if any tests failed
+        if (totalFailed > 0) {
+            console.log("\n❌ Some tests failed!");
             process.exit(1);
+        } else {
+            console.log("\n✅ All tests passed!");
         }
     }
 }
 
-// Run integration tests
-async function main() {
-    const runner = new CircuitTestRunner();
-    await runner.runAllTests();
+// Simple approach: directly run the test files
+async function runIntegrationTests() {
+    console.log("🚀 Starting integration tests...\n");
+    
+    const testFiles = [
+        '../scripts/test_nullifier/test_nullifier.ts',
+        '../scripts/test_note_commitment/test_note_commitment.ts', 
+        '../scripts/test_withdraw/test_withdraw.ts',
+        '../scripts/test_merkle_proof/test_merkle_proof.ts'
+    ];
+    
+    let totalSuites = 0;
+    let totalTestCases = 0;
+    let successfulSuites = 0;
+    const startTime = Date.now();
+    
+    for (const testFile of testFiles) {
+        const testPath = path.resolve(__dirname, testFile);
+        const suiteName = path.basename(path.dirname(testFile));
+        
+        if (!fs.existsSync(testPath)) {
+            console.log(`⚠️  Skipping ${suiteName} - test file not found`);
+            continue;
+        }
+        
+        totalSuites++;
+        console.log(`\n🏃 Running test suite: ${suiteName}`);
+        console.log('='.repeat(60));
+        
+        try {
+            // Execute the test file as a child process to avoid module caching issues
+            const { execSync } = require('child_process');
+            const output = execSync(`npx ts-node ${testPath}`, { 
+                cwd: path.dirname(testPath),
+                encoding: 'utf8',
+                stdio: 'pipe'
+            });
+            
+            console.log(output);
+            
+            // Parse output to count test cases
+            const testCaseMatches = output.match(/Test Case \d+:/g);
+            const testCaseCount = testCaseMatches ? testCaseMatches.length : 0;
+            totalTestCases += testCaseCount;
+            
+            successfulSuites++;
+            console.log(`✅ ${suiteName} suite completed successfully`);
+            
+        } catch (error: any) {
+            console.log(`❌ ${suiteName} suite failed`);
+            if (error.stdout) {
+                console.log(error.stdout.toString());
+            }
+            if (error.stderr) {
+                console.error(error.stderr.toString());
+            }
+        }
+    }
+    
+    const totalDuration = Date.now() - startTime;
+    
+    // Print summary
+    console.log("\n\n📊 Integration Test Results");
+    console.log("=".repeat(60));
+    console.log("📈 Summary:");
+    console.log(`   Test Suites Run: ${totalSuites}`);
+    console.log(`   Test Suites Passed: ${successfulSuites}`);
+    console.log(`   Test Suites Failed: ${totalSuites - successfulSuites}`);
+    console.log(`   Total Test Cases: ${totalTestCases}`);
+    console.log(`   Total Duration: ${totalDuration}ms`);
+    console.log("=".repeat(60));
+    
+    if (successfulSuites < totalSuites) {
+        console.log("\n❌ Some test suites failed!");
+        process.exit(1);
+    } else {
+        console.log("\n✅ All test suites passed!");
+    }
 }
 
-main().catch(e => {
+// Run integration tests
+runIntegrationTests().catch(e => {
     console.error("Integration test runner failed:", e);
     process.exit(1);
-}); 
+});

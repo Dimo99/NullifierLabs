@@ -1,5 +1,5 @@
 import { randomBigInt, buildPoseidon } from '../common';
-import { CircuitTestRunner } from '../circuit-test-runner';
+import { CircuitTestRunner, CircuitTestConfig, CircuitTestCase } from '../circuit-test-runner';
 import * as path from 'path';
 
 // Use absolute paths
@@ -31,12 +31,10 @@ function verifyNoteCommitmentPublicInputs(publicJson: any[], expectedCommitment:
     console.log('✅ Public input verification passed!');
 }
 
-async function main() {
-    const runner = new CircuitTestRunner(SCRIPT_DIR);
-
-    await runner.runCircuitTest({
-        circuitName: 'test_note_commitment',
-        outputDir: OUTPUT_DIR,
+// Generate note commitment test case
+function generateNoteCommitmentTest(): CircuitTestCase {
+    return {
+        name: "Valid Note Commitment Generation",
         inputGenerator: async () => {
             // Generate random inputs
             const amount = randomBigInt(8); // 64-bit
@@ -69,7 +67,21 @@ async function main() {
         },
         witnessVerifier: verifyNoteCommitment,
         publicInputsVerifier: verifyNoteCommitmentPublicInputs
-    });
+    };
+}
+
+async function main() {
+    const runner = new CircuitTestRunner(SCRIPT_DIR);
+
+    const config: CircuitTestConfig = {
+        circuitName: 'test_note_commitment',
+        outputDir: OUTPUT_DIR,
+        testCases: [
+            generateNoteCommitmentTest()
+        ]
+    };
+
+    await runner.runTests(config);
 }
 
 main().catch(e => { 
