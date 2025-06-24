@@ -67,7 +67,16 @@ export class CircuitTestRunner {
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 if (testCase.shouldFail) {
-                    console.log(`✅ Test case "${testCase.name}" failed as expected: ${errorMessage}`);
+                    // Check if this is a constraint violation (expected)
+                    const isConstraintViolation = (error as any).isConstraintViolation || 
+                                                 errorMessage.includes('Constraint violation') ||
+                                                 errorMessage.includes('Assert Failed');
+                    
+                    if (isConstraintViolation) {
+                        console.log(`✅ Test case "${testCase.name}" failed as expected (constraint violation)`);
+                    } else {
+                        console.log(`✅ Test case "${testCase.name}" failed as expected: ${errorMessage}`);
+                    }
                 } else {
                     console.error(`❌ Test case "${testCase.name}" failed unexpectedly: ${errorMessage}`);
                     throw error;

@@ -103,6 +103,11 @@ export function run(cmd: string, opts: any = {}, outputDir?: string) {
     } catch (error: any) {
         const duration = Date.now() - start;
         
+        // Check if this is a constraint violation (expected failure)
+        const isConstraintViolation = error.stderr?.includes('Assert Failed') || 
+                                     error.stdout?.includes('Assert Failed') ||
+                                     (error.message && error.message.includes('Assert Failed'));
+        
         // Log error to file in outputs directory if provided
         if (outputDir && fs.existsSync(outputDir)) {
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -110,9 +115,30 @@ export function run(cmd: string, opts: any = {}, outputDir?: string) {
             const logFile = path.join(outputDir, `${cmdName}-error-${timestamp}.log`);
             const logContent = `Command: ${cmd}\nDuration: ${duration}ms\nExit Code: ${error.status || 'unknown'}\n\nSTDOUT:\n${error.stdout || 'none'}\n\nSTDERR:\n${error.stderr || 'none'}\n`;
             fs.writeFileSync(logFile, logContent);
-            console.log(`❌ Command failed (${duration}ms) - see ${logFile}`);
+            
+            if (isVerbose()) {
+                if (isConstraintViolation) {
+                    console.log(`⚠️ Constraint violation detected (${duration}ms) - see ${logFile}`);
+                } else {
+                    console.log(`❌ Command failed (${duration}ms) - see ${logFile}`);
+                }
+            }
         } else {
-            console.log(`❌ Command failed (${duration}ms)`);
+            if (isVerbose()) {
+                if (isConstraintViolation) {
+                    console.log(`⚠️ Constraint violation detected (${duration}ms)`);
+                } else {
+                    console.log(`❌ Command failed (${duration}ms)`);
+                }
+            }
+        }
+        
+        // Enhance error message for constraint violations
+        if (isConstraintViolation) {
+            const constraintError = new Error(`Constraint violation: Circuit assertion failed`);
+            (constraintError as any).isConstraintViolation = true;
+            (constraintError as any).originalError = error;
+            throw constraintError;
         }
         
         throw error;
