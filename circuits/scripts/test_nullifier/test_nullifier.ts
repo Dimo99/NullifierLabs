@@ -1,4 +1,4 @@
-import { randomBigInt, buildPoseidon } from '../common';
+import { randomBigInt, buildPoseidon, isVerbose } from '../common';
 import { CircuitTestRunner, CircuitTestConfig, CircuitTestCase } from '../circuit-test-runner';
 import * as path from 'path';
 
@@ -11,24 +11,33 @@ function verifyNullifier(witness: bigint[], expectedNullifier: string): void {
     // In the nullifier circuit, the output is at index 1 (after the '1' signal)
     const circuitNullifier = witness[1].toString();
     
-    console.log('🔍 Witness verification:');
-    console.log(`  Expected nullifier: ${expectedNullifier}`);
-    console.log(`  Circuit nullifier:  ${circuitNullifier}`);
+    if (isVerbose()) {
+        console.log('🔍 Witness verification:');
+        console.log(`  Expected nullifier: ${expectedNullifier}`);
+        console.log(`  Circuit nullifier:  ${circuitNullifier}`);
+    }
     
     if (circuitNullifier !== expectedNullifier) {
         throw new Error(`❌ Nullifier mismatch! Expected: ${expectedNullifier}, Got: ${circuitNullifier}`);
     }
     
-    console.log('✅ Nullifier verification passed!');
+    if (isVerbose()) {
+        console.log('✅ Nullifier verification passed!');
+    }
 }
 
 function verifyNullifierPublicInputs(publicJson: any[], expectedNullifier: string): void {
-    console.log(`  Nullifier: ${publicJson[0]}`);
+    if (isVerbose()) {
+        console.log(`  Nullifier: ${publicJson[0]}`);
+    }
     
     if (publicJson[0] !== expectedNullifier) {
         throw new Error(`❌ Public input mismatch! Expected: ${expectedNullifier}, Got: ${publicJson[0]}`);
     }
-    console.log('✅ Public input verification passed!');
+    
+    if (isVerbose()) {
+        console.log('✅ Public input verification passed!');
+    }
 }
 
 // Generate nullifier test case

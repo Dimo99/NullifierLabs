@@ -1,4 +1,4 @@
-import { randomBigInt, buildPoseidon, randomBit } from '../common';
+import { randomBigInt, buildPoseidon, randomBit, isVerbose } from '../common';
 import { CircuitTestRunner, CircuitTestConfig, CircuitTestCase } from '../circuit-test-runner';
 import * as path from 'path';
 
@@ -29,19 +29,21 @@ function verifyWithdrawOutputs(witness: any[], expected: WithdrawExpected): void
     const circuitRecipient = witness[5].toString();
     const circuitRelayFee = witness[6].toString();
     
-    console.log('🔍 Witness verification:');
-    console.log(`  Expected nullifier: ${expected.nullifier}`);
-    console.log(`  Circuit nullifier:  ${circuitNullifier}`);
-    console.log(`  Expected new commitment: ${expected.newCommitment}`);
-    console.log(`  Circuit new commitment:  ${circuitNewCommitment}`);
-    console.log(`  Expected merkle root: ${expected.merkleRoot}`);
-    console.log(`  Circuit merkle root:  ${circuitMerkleRoot}`);
-    console.log(`  Expected withdraw amount: ${expected.withdrawAmount}`);
-    console.log(`  Circuit withdraw amount:  ${circuitWithdrawAmount}`);
-    console.log(`  Expected recipient: ${expected.recipient}`);
-    console.log(`  Circuit recipient:  ${circuitRecipient}`);
-    console.log(`  Expected relay fee: ${expected.relayFee}`);
-    console.log(`  Circuit relay fee:  ${circuitRelayFee}`);
+    if (isVerbose()) {
+        console.log('🔍 Witness verification:');
+        console.log(`  Expected nullifier: ${expected.nullifier}`);
+        console.log(`  Circuit nullifier:  ${circuitNullifier}`);
+        console.log(`  Expected new commitment: ${expected.newCommitment}`);
+        console.log(`  Circuit new commitment:  ${circuitNewCommitment}`);
+        console.log(`  Expected merkle root: ${expected.merkleRoot}`);
+        console.log(`  Circuit merkle root:  ${circuitMerkleRoot}`);
+        console.log(`  Expected withdraw amount: ${expected.withdrawAmount}`);
+        console.log(`  Circuit withdraw amount:  ${circuitWithdrawAmount}`);
+        console.log(`  Expected recipient: ${expected.recipient}`);
+        console.log(`  Circuit recipient:  ${circuitRecipient}`);
+        console.log(`  Expected relay fee: ${expected.relayFee}`);
+        console.log(`  Circuit relay fee:  ${circuitRelayFee}`);
+    }
     
     if (circuitNullifier !== expected.nullifier) {
         throw new Error(`❌ Nullifier mismatch! Expected: ${expected.nullifier}, Got: ${circuitNullifier}`);
@@ -67,16 +69,20 @@ function verifyWithdrawOutputs(witness: any[], expected: WithdrawExpected): void
         throw new Error(`❌ Relay fee mismatch! Expected: ${expected.relayFee}, Got: ${circuitRelayFee}`);
     }
     
-    console.log('✅ Withdraw outputs verification passed!');
+    if (isVerbose()) {
+        console.log('✅ Withdraw outputs verification passed!');
+    }
 }
 
 function verifyWithdrawPublicInputs(publicJson: any[], expected: WithdrawExpected): void {
-    console.log(`  Nullifier: ${publicJson[0]}`);
-    console.log(`  New commitment: ${publicJson[1]}`);
-    console.log(`  Merkle root: ${publicJson[2]}`);
-    console.log(`  Withdraw amount: ${publicJson[3]}`);
-    console.log(`  Recipient: ${publicJson[4]}`);
-    console.log(`  Relay fee: ${publicJson[5]}`);
+    if (isVerbose()) {
+        console.log(`  Nullifier: ${publicJson[0]}`);
+        console.log(`  New commitment: ${publicJson[1]}`);
+        console.log(`  Merkle root: ${publicJson[2]}`);
+        console.log(`  Withdraw amount: ${publicJson[3]}`);
+        console.log(`  Recipient: ${publicJson[4]}`);
+        console.log(`  Relay fee: ${publicJson[5]}`);
+    }
     
     if (publicJson[0] !== expected.nullifier) {
         throw new Error(`❌ Nullifier mismatch! Expected: ${expected.nullifier}, Got: ${publicJson[0]}`);
@@ -96,7 +102,10 @@ function verifyWithdrawPublicInputs(publicJson: any[], expected: WithdrawExpecte
     if (publicJson[5] !== expected.relayFee) {
         throw new Error(`❌ Relay fee mismatch! Expected: ${expected.relayFee}, Got: ${publicJson[5]}`);
     }
-    console.log('✅ Public inputs verification passed!');
+    
+    if (isVerbose()) {
+        console.log('✅ Public inputs verification passed!');
+    }
 }
 
 // Generate withdraw test case

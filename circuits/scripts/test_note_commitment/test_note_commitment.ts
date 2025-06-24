@@ -1,4 +1,4 @@
-import { randomBigInt, buildPoseidon } from '../common';
+import { randomBigInt, buildPoseidon, isVerbose } from '../common';
 import { CircuitTestRunner, CircuitTestConfig, CircuitTestCase } from '../circuit-test-runner';
 import * as path from 'path';
 
@@ -11,24 +11,33 @@ function verifyNoteCommitment(witness: any[], expectedCommitment: string): void 
     // In the note commitment circuit, the output is at index 1 (after the '1' signal)
     const circuitCommitment = witness[1].toString();
     
-    console.log('🔍 Witness verification:');
-    console.log(`  Expected commitment: ${expectedCommitment}`);
-    console.log(`  Circuit commitment:  ${circuitCommitment}`);
+    if (isVerbose()) {
+        console.log('🔍 Witness verification:');
+        console.log(`  Expected commitment: ${expectedCommitment}`);
+        console.log(`  Circuit commitment:  ${circuitCommitment}`);
+    }
     
     if (circuitCommitment !== expectedCommitment) {
         throw new Error(`❌ Commitment mismatch! Expected: ${expectedCommitment}, Got: ${circuitCommitment}`);
     }
     
-    console.log('✅ Note commitment verification passed!');
+    if (isVerbose()) {
+        console.log('✅ Note commitment verification passed!');
+    }
 }
 
 function verifyNoteCommitmentPublicInputs(publicJson: any[], expectedCommitment: string): void {
-    console.log(`  Commitment: ${publicJson[0]}`);
+    if (isVerbose()) {
+        console.log(`  Commitment: ${publicJson[0]}`);
+    }
     
     if (publicJson[0] !== expectedCommitment) {
         throw new Error(`❌ Public input mismatch! Expected: ${expectedCommitment}, Got: ${publicJson[0]}`);
     }
-    console.log('✅ Public input verification passed!');
+    
+    if (isVerbose()) {
+        console.log('✅ Public input verification passed!');
+    }
 }
 
 // Generate note commitment test case

@@ -1,4 +1,4 @@
-import { randomBigInt, buildPoseidon, randomBit } from '../common';
+import { randomBigInt, buildPoseidon, randomBit, isVerbose } from '../common';
 import { CircuitTestRunner, CircuitTestConfig, CircuitTestCase } from '../circuit-test-runner';
 import * as path from 'path';
 
@@ -12,24 +12,33 @@ function verifyMerkleProof(witness: any[], expectedIsValid: number): void {
     // In the merkle proof circuit, the output is at index 1 (after the '1' signal)
     const circuitIsValid = Number(witness[1]);
     
-    console.log('🔍 Witness verification:');
-    console.log(`  Expected is_valid: ${expectedIsValid}`);
-    console.log(`  Circuit is_valid:  ${circuitIsValid}`);
+    if (isVerbose()) {
+        console.log('🔍 Witness verification:');
+        console.log(`  Expected is_valid: ${expectedIsValid}`);
+        console.log(`  Circuit is_valid:  ${circuitIsValid}`);
+    }
     
     if (circuitIsValid !== expectedIsValid) {
         throw new Error(`❌ Merkle proof validation mismatch! Expected: ${expectedIsValid}, Got: ${circuitIsValid}`);
     }
     
-    console.log('✅ Merkle proof verification passed!');
+    if (isVerbose()) {
+        console.log('✅ Merkle proof verification passed!');
+    }
 }
 
 function verifyMerkleProofPublicInputs(publicJson: any[], expectedIsValid: number): void {
-    console.log(`  is_valid: ${publicJson[0]}`);
+    if (isVerbose()) {
+        console.log(`  is_valid: ${publicJson[0]}`);
+    }
     
     if (publicJson[0] !== expectedIsValid.toString()) {
         throw new Error(`❌ Public input mismatch! Expected: ${expectedIsValid}, Got: ${publicJson[0]}`);
     }
-    console.log('✅ Public input verification passed!');
+    
+    if (isVerbose()) {
+        console.log('✅ Public input verification passed!');
+    }
 }
 
 // Helper function to generate merkle proof data

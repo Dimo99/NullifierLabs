@@ -1,4 +1,4 @@
-import { time, ensurePtau, run } from './common';
+import { time, ensurePtau, run, isVerbose } from './common';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -50,8 +50,11 @@ export class CircuitTestRunner {
         // Run each test case
         for (let i = 0; i < config.testCases.length; i++) {
             const testCase = config.testCases[i];
-            console.log(`\n📋 Test Case ${i + 1}: ${testCase.name}`);
-            console.log('─'.repeat(50));
+            
+            if (isVerbose()) {
+                console.log(`\n📋 Test Case ${i + 1}: ${testCase.name}`);
+                console.log('─'.repeat(50));
+            }
 
             try {
                 await this.runTestCase(config.circuitName, config.outputDir, testCase, i + 1);
@@ -92,8 +95,8 @@ export class CircuitTestRunner {
             JSON.stringify(input, null, 2)
         );
 
-        // Log inputs if custom logger provided
-        if (testCase.logInputs) {
+        // Log inputs if custom logger provided (only in verbose mode)
+        if (testCase.logInputs && isVerbose()) {
             testCase.logInputs(input, expected);
         }
 
@@ -108,10 +111,12 @@ export class CircuitTestRunner {
                     throw new Error('Witness file not found');
                 }
 
-                run(`snarkjs wtns export json ${outputDir}/${witnessFile} ${outputDir}/${witnessJsonFile}`);
+                run(`snarkjs wtns export json ${outputDir}/${witnessFile} ${outputDir}/${witnessJsonFile}`, {}, outputDir);
                 const witness = JSON.parse(fs.readFileSync(path.join(outputDir, witnessJsonFile), 'utf8'));
                 
-                console.log(`📊 Witness contains ${witness.length} signals`);
+                if (isVerbose()) {
+                    console.log(`📊 Witness contains ${witness.length} signals`);
+                }
                 
                 testCase.witnessVerifier!(witness, expected);
             });
@@ -126,8 +131,9 @@ export class CircuitTestRunner {
         // Verify public inputs if custom verifier provided
         if (testCase.publicInputsVerifier) {
             const publicJson = JSON.parse(fs.readFileSync(path.join(outputDir, publicFile), 'utf8'));
-            console.log(`\n📋 Public inputs from proof (${testCase.name}):`);
-            
+            if (isVerbose()) {
+                console.log(`\n📋 Public inputs from proof (${testCase.name}):`);
+            }
             testCase.publicInputsVerifier!(publicJson, expected);
         }
     }
@@ -137,7 +143,7 @@ export class CircuitTestRunner {
             const originalCwd = process.cwd();
             try {
                 process.chdir(this.scriptDir);
-                run(`circom ${circuitName}.circom --r1cs --wasm --sym --O2 -o ${outputDir}`);
+                run(`circom ${circuitName}.circom --r1cs --wasm --sym --O2 -o ${outputDir}`, {}, outputDir);
             } finally {
                 process.chdir(originalCwd);
             }
@@ -147,34 +153,34 @@ export class CircuitTestRunner {
     private async generateWitness(circuitName: string, outputDir: string, inputFile: string, witnessFile: string, testName?: string): Promise<void> {
         const label = testName ? `Generate witness (${testName})` : 'Generate witness';
         await time(label, async () => {
-            run(`node ${outputDir}/${circuitName}_js/generate_witness.js ${outputDir}/${circuitName}_js/${circuitName}.wasm ${outputDir}/${inputFile} ${outputDir}/${witnessFile}`);
+            run(`node ${outputDir}/${circuitName}_js/generate_witness.js ${outputDir}/${circuitName}_js/${circuitName}.wasm ${outputDir}/${inputFile} ${outputDir}/${witnessFile}`, {}, outputDir);
         });
     }
 
 
     private async generateZkey(circuitName: string, outputDir: string): Promise<void> {
         await time('Generate zkey', async () => {
-            run(`snarkjs groth16 setup ${outputDir}/${circuitName}.r1cs ${this.ptauFile} ${outputDir}/circuit_final.zkey`);
+            run(`snarkjs groth16 setup ${outputDir}/${circuitName}.r1cs ${this.ptauFile} ${outputDir}/circuit_final.zkey`, {}, outputDir);
         });
     }
 
     private async exportVerificationKey(outputDir: string): Promise<void> {
         await time('Export vkey', async () => {
-            run(`snarkjs zkey export verificationkey ${outputDir}/circuit_final.zkey ${outputDir}/verification_key.json`);
+            run(`snarkjs zkey export verificationkey ${outputDir}/circuit_final.zkey ${outputDir}/verification_key.json`, {}, outputDir);
         });
     }
 
     private async generateProof(outputDir: string, witnessFile: string, proofFile: string, publicFile: string, testName?: string): Promise<void> {
         const label = testName ? `Generate proof (${testName})` : 'Generate proof';
         await time(label, async () => {
-            run(`snarkjs groth16 prove ${outputDir}/circuit_final.zkey ${outputDir}/${witnessFile} ${outputDir}/${proofFile} ${outputDir}/${publicFile}`);
+            run(`snarkjs groth16 prove ${outputDir}/circuit_final.zkey ${outputDir}/${witnessFile} ${outputDir}/${proofFile} ${outputDir}/${publicFile}`, {}, outputDir);
         });
     }
 
     private async verifyProof(outputDir: string, publicFile: string, proofFile: string, testName?: string): Promise<void> {
         const label = testName ? `Verify proof (${testName})` : 'Verify proof';
         await time(label, async () => {
-            run(`snarkjs groth16 verify ${outputDir}/verification_key.json ${outputDir}/${publicFile} ${outputDir}/${proofFile}`);
+            run(`snarkjs groth16 verify ${outputDir}/verification_key.json ${outputDir}/${publicFile} ${outputDir}/${proofFile}`, {}, outputDir);
         });
     }
 
