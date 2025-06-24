@@ -1,0 +1,28 @@
+{
+  "name": "private_mixer",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run test:integration",
+    "test:integration": "npx ts-node circuits/test/integration_test.ts",
+    "test:nullifier": "npx ts-node circuits/scripts/test_nullifier/test_nullifier.ts",
+    "test:note-commitment": "npx ts-node circuits/scripts/test_note_commitment/test_note_commitment.ts",
+    "test:merkle-proof": "npx ts-node circuits/scripts/test_merkle_proof/test_merkle_proof.ts",
+    "test:withdraw": "npx ts-node circuits/scripts/test_withdraw/test_withdraw.ts",
+    "test:all-circuits": "npm run test:nullifier && npm run test:note-commitment && npm run test:merkle-proof && npm run test:withdraw"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "circom_tester": "^0.0.24",
+    "circomlibjs": "^0.1.7",
+    "snarkjs": "^0.7.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "circomlib": "^2.0.5"
+  }
+}
