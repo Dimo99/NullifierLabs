@@ -43,7 +43,7 @@ async function runIntegrationTests() {
             });
             
             // Parse output to count test cases
-            const testCaseMatches = stdout.match(/Test case .* passed!/g);
+            const testCaseMatches = stdout.match(/✅ Test case.*/g);
             const testCaseCount = testCaseMatches ? testCaseMatches.length : 0;
             
             return {

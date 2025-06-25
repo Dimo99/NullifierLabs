@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./WithdrawVerifier.sol";
+import "./IPoseidon.sol";
 
 contract PrivateMixer is ReentrancyGuard, Pausable, Ownable {
     
     Groth16Verifier public immutable verifier;
+    IPoseidon2 public immutable poseidon;
     
     uint256 public constant MERKLE_DEPTH = 30;
     
@@ -35,6 +37,7 @@ contract PrivateMixer is ReentrancyGuard, Pausable, Ownable {
     );
     
     error InvalidVerifierAddress();
+    error InvalidPoseidonAddress();
     error MerkleTreeFull();
     error InvalidProof();
     error NullifierAlreadyUsed();
@@ -45,12 +48,18 @@ contract PrivateMixer is ReentrancyGuard, Pausable, Ownable {
     error MerkleRootNotFound();
     
     
-    constructor(address _verifier) Ownable(msg.sender) {
+    constructor(address _verifier, address _poseidon) Ownable(msg.sender) {
         if (_verifier == address(0)) {
             revert InvalidVerifierAddress();
         }
 
+        if (_poseidon == address(0)) {
+            revert InvalidPoseidonAddress();
+        }
+
         verifier = Groth16Verifier(_verifier);
+
+        poseidon = IPoseidon2(_poseidon);
         
         for (uint256 i = 0; i < MERKLE_ROOT_HISTORY_SIZE; i++) {
             merkleRoots[i] = bytes32(0);
@@ -58,8 +67,8 @@ contract PrivateMixer is ReentrancyGuard, Pausable, Ownable {
         currentRootIndex = 0;
         
         // Initialize Merkle branch with Poseidon hash of zeros
-        // For now using keccak256, but should be replaced with Poseidon
-        bytes32 zeroHash = keccak256(abi.encodePacked(bytes32(0), bytes32(0)));
+        uint256[2] memory zeroInputs = [uint256(0), uint256(0)];
+        bytes32 zeroHash = bytes32(poseidon.poseidon(zeroInputs));
         for (uint256 i = 0; i < MERKLE_DEPTH; i++) {
             merkleBranch[i] = zeroHash;
         }
@@ -76,10 +85,12 @@ contract PrivateMixer is ReentrancyGuard, Pausable, Ownable {
         for (uint256 i = 0; i < MERKLE_DEPTH; i++) {
             if ((currentLeafIndex >> i) & 1 == 0) {
                 // Current is left child
-                current = keccak256(abi.encodePacked(current, merkleBranch[i]));
+                uint256[2] memory inputs = [uint256(current), uint256(merkleBranch[i])];
+                current = bytes32(poseidon.poseidon(inputs));
             } else {
                 // Current is right child
-                current = keccak256(abi.encodePacked(merkleBranch[i], current));
+                uint256[2] memory inputs = [uint256(merkleBranch[i]), uint256(current)];
+                current = bytes32(poseidon.poseidon(inputs));
             }
         }
         
@@ -101,12 +112,14 @@ contract PrivateMixer is ReentrancyGuard, Pausable, Ownable {
             if ((currentLeafIndex >> i) & 1 == 0) {
                 // Current is left child, update branch[i] with right sibling
                 merkleBranch[i] = current;
-                current = keccak256(abi.encodePacked(current, merkleBranch[i]));
+                uint256[2] memory inputs = [uint256(current), uint256(merkleBranch[i])];
+                current = bytes32(poseidon.poseidon(inputs));
             } else {
                 // Current is right child, update branch[i] with left sibling
                 bytes32 temp = merkleBranch[i];
                 merkleBranch[i] = current;
-                current = keccak256(abi.encodePacked(temp, current));
+                uint256[2] memory inputs = [uint256(temp), uint256(current)];
+                current = bytes32(poseidon.poseidon(inputs));
             }
         }
         
@@ -133,23 +146,23 @@ contract PrivateMixer is ReentrancyGuard, Pausable, Ownable {
     
     /**
      * @dev Withdraw funds from the mixer using a zk-SNARK proof
-     * @param a zk-SNARK proof
-     * @param b zk-SNARK proof
-     * @param c zk-SNARK proof
-     * @param publicInputs The public inputs for the proof verification
-     * @param nullifier The nullifier to prevent double-spending
-     * @param newCommitment The commitment for the change note
-     * @param amount The amount to withdraw
-     * @param recipient The recipient address
-     * @param relayFee The fee for the relay service
+     * @param a zk-SNARK proof component A
+     * @param b zk-SNARK proof component B  
+     * @param c zk-SNARK proof component C
+     * @param nullifier The nullifier to prevent double-spending (must match proof)
+     * @param newCommitment The commitment for the change note (must match proof)
+     * @param merkleRoot The Merkle root being proven against (must match proof)
+     * @param amount The amount to withdraw (must match proof)
+     * @param recipient The recipient address (must match proof)
+     * @param relayFee The fee for the relay service (must match proof)
      */
     function withdraw(
         uint256[2] memory a,
         uint256[2][2] memory b,
         uint256[2] memory c,
-        uint256[4] memory publicInputs,
         bytes32 nullifier,
-        bytes32 newCommitment,
+        bytes32 newCommitment, 
+        bytes32 merkleRoot,
         uint256 amount,
         address recipient,
         uint256 relayFee
@@ -167,24 +180,23 @@ contract PrivateMixer is ReentrancyGuard, Pausable, Ownable {
         }
         
         // Find the root index that matches the proof's Merkle root
-        bytes32 proofRoot = bytes32(publicInputs[0]);
-        uint256 rootIndex = findMerkleRootIndex(proofRoot);
-        
+        uint256 rootIndex = findMerkleRootIndex(merkleRoot);
         if (rootIndex == type(uint256).max) {
             revert MerkleRootNotFound();
         }
         
-        // Verify the zk-SNARK proof
-        uint256[6] memory inputs = [
+        // Verify the zk-SNARK proof with the circuit's expected public input format:
+        // [nullifier, newCommitment, merkleRoot, withdrawAmount, recipient, relayFee]
+        uint256[6] memory proofInputs = [
             uint256(nullifier),
             uint256(newCommitment),
-            publicInputs[0], // merkle_root
-            publicInputs[1], // withdraw_amount
-            publicInputs[2], // recipient
-            publicInputs[3]  // relay_fee
+            uint256(merkleRoot),
+            amount,
+            uint256(uint160(recipient)),
+            relayFee
         ];
         
-        if (!verifier.verifyProof(a, b, c, inputs)) {
+        if (!verifier.verifyProof(a, b, c, proofInputs)) {
             revert InvalidProof();
         }
         
@@ -254,7 +266,9 @@ contract PrivateMixer is ReentrancyGuard, Pausable, Ownable {
      * @return The current Merkle root
      */
     function getCurrentMerkleRoot() external view returns (bytes32) {
-        return merkleRoots[currentRootIndex];
+        // Current root is at the previous index since we increment after storing
+        uint256 currentIndex = (currentRootIndex + MERKLE_ROOT_HISTORY_SIZE - 1) % MERKLE_ROOT_HISTORY_SIZE;
+        return merkleRoots[currentIndex];
     }
     
     /**
@@ -286,7 +300,7 @@ contract PrivateMixer is ReentrancyGuard, Pausable, Ownable {
      * @param root The Merkle root to check
      * @return The index if found, or type(uint256).max if not found
      */
-    function findMerkleRootIndex(bytes32 root) external view returns (uint256) {
+    function findMerkleRootIndex(bytes32 root) public view returns (uint256) {
         for (uint256 i = 0; i < MERKLE_ROOT_HISTORY_SIZE; i++) {
             if (merkleRoots[i] == root) {
                 return i;
