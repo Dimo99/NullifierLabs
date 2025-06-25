@@ -77,8 +77,6 @@ contract DeployPoseidon is Script {
             }
         }
 
-        console.log(string.concat("Deployed Poseidon", name, " at:"), addr);
-
         // Verify the address matches expected
         require(
             addr ==

@@ -28,14 +28,13 @@ abstract contract PoseidonTestBase is Test {
      * @dev Call circomlibjs Poseidon via FFI for reference values
      */
     function _getCircomlibResult(uint256 nInputs, uint256[] memory inputs) internal returns (uint256) {
-        string[] memory args = new string[](4 + nInputs);
-        args[0] = "npx";
-        args[1] = "ts-node";
-        args[2] = "scripts/poseidon_test.ts";
-        args[3] = vm.toString(nInputs);
+        string[] memory args = new string[](3 + nInputs);
+        args[0] = "node";
+        args[1] = "../dist/contracts-evm/scripts/poseidon_test.js";
+        args[2] = vm.toString(nInputs);
         
         for (uint i = 0; i < nInputs; i++) {
-            args[4 + i] = vm.toString(inputs[i]);
+            args[3 + i] = vm.toString(inputs[i]);
         }
 
         bytes memory result = vm.ffi(args);
