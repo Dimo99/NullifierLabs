@@ -1,9 +1,28 @@
 'use client';
 
+import { useState } from 'react';
 import { useWallet } from '../hooks/useWallet';
+import { SecretGenerator } from '../components/SecretGenerator';
 
 export default function Home() {
   const { account, isConnected, isConnecting, error, connectWallet, disconnectWallet } = useWallet();
+  const [showSecretGenerator, setShowSecretGenerator] = useState(false);
+  const [generatedSecret, setGeneratedSecret] = useState<string | null>(null);
+
+  const handleStartDeposit = () => {
+    setShowSecretGenerator(true);
+  };
+
+  const handleSecretGenerated = (secretKey: string) => {
+    setGeneratedSecret(secretKey);
+    setShowSecretGenerator(false);
+    // TODO: Navigate to deposit page with secret key
+    console.log('Secret key generated:', secretKey);
+  };
+
+  const handleCancelGeneration = () => {
+    setShowSecretGenerator(false);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white">
@@ -76,6 +95,7 @@ export default function Home() {
                 Deposit ETH into the private mixer. You'll receive a secret key to withdraw your funds later.
               </p>
               <button 
+                onClick={handleStartDeposit}
                 disabled={!isConnected}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors font-medium"
               >
@@ -152,6 +172,14 @@ export default function Home() {
           </p>
         </div>
       </footer>
+
+      {/* Secret Generator Modal */}
+      {showSecretGenerator && (
+        <SecretGenerator
+          onSecretGenerated={handleSecretGenerated}
+          onCancel={handleCancelGeneration}
+        />
+      )}
     </div>
   );
 }
