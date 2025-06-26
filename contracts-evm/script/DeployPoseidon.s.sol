@@ -24,6 +24,16 @@ contract DeployPoseidon is Script {
         vm.stopBroadcast();
     }
 
+    function deployIPoseidon2()
+        public
+        returns (address poseidonT2Addr)
+    {
+        poseidonT2Addr = deployIfNeeded(
+            PoseidonByteCodes.getPoseidonT3Bytecode(),
+            "IPoseidon2"
+        );
+    }
+
     function deployAll()
         public
         returns (
@@ -55,8 +65,7 @@ contract DeployPoseidon is Script {
         // Calculate deterministic address
         addr = vm.computeCreate2Address(
             SALT,
-            keccak256(bytecode),
-            address(this)
+            keccak256(bytecode)
         );
 
         // Check if already deployed
@@ -68,6 +77,7 @@ contract DeployPoseidon is Script {
             return addr;
         }
 
+        vm.startBroadcast();
         // Deploy with CREATE2
         bytes32 salt = SALT;
         assembly {
@@ -76,14 +86,14 @@ contract DeployPoseidon is Script {
                 revert(0, 0)
             }
         }
+        vm.stopBroadcast();
 
         // Verify the address matches expected
         require(
             addr ==
                 vm.computeCreate2Address(
                     SALT,
-                    keccak256(bytecode),
-                    address(this)
+                    keccak256(bytecode)
                 ),
             "Address mismatch"
         );
