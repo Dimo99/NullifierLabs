@@ -31,6 +31,7 @@ contract PrivateMixer is ReentrancyGuard, Pausable, Ownable, MerkleTree {
     error InsufficientBalance();
     error InvalidMerkleRoot();
     error MerkleRootNotFound();
+    error InvalidPubkey();
     
     
     constructor(address _verifier, address _poseidon) 
@@ -47,11 +48,19 @@ contract PrivateMixer is ReentrancyGuard, Pausable, Ownable, MerkleTree {
     
     /**
      * @dev Deposit funds into the mixer
-     * @param commitment The commitment hash of the note
+     * @param pubkey The public key for the note
      */
-    function deposit(uint256 commitment) external payable whenNotPaused {
-        require(msg.value > 0, "Amount must be greater than 0");
-        require(commitment != 0, "Invalid commitment");
+    function deposit(uint256 pubkey) external payable whenNotPaused nonReentrant {
+        if (msg.value == 0) {
+            revert InvalidAmount();
+        }
+        if (pubkey == 0) {
+            revert InvalidPubkey();
+        }
+        
+        // Compute commitment = Poseidon(amount, pubkey)
+        uint256[2] memory inputs = [msg.value, pubkey];
+        uint256 commitment = poseidon.poseidon(inputs);
         
         // Insert commitment into Merkle tree (automatically updates root)
         insertLeaf(commitment);

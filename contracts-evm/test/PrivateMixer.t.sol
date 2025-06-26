@@ -42,33 +42,39 @@ contract PrivateMixerTest is Test {
 
     function generateCommitment(
         uint256 amount,
-        uint256 randomness,
         uint256 secretKey
     ) internal view returns (uint256) {
         // First hash the secret key to get the public key using Poseidon1
         uint256[1] memory secretKeyInput = [secretKey];
         uint256 pubkey = poseidonT2.poseidon(secretKeyInput);
 
-        // Then hash amount, randomness, and pubkey to get the commitment using Poseidon3
-        uint256[3] memory commitmentInputs = [amount, randomness, pubkey];
-        return poseidonT4.poseidon(commitmentInputs);
+        // Then hash amount and pubkey to get the commitment using Poseidon2
+        uint256[2] memory commitmentInputs = [amount, pubkey];
+        return poseidonT3.poseidon(commitmentInputs);
+    }
+
+    function generatePubkey(uint256 secretKey) internal view returns (uint256) {
+        uint256[1] memory secretKeyInput = [secretKey];
+        return poseidonT2.poseidon(secretKeyInput);
     }
 
     function testBasicDeposit() public {
-        // Generate a test commitment with proper structure
+        // Generate a test note with proper structure
         uint256 amount = 1 ether;
-        uint256 randomness = 123456789;
         uint256 secretKey = 987654321;
 
-        uint256 commitment = generateCommitment(amount, randomness, secretKey);
+        uint256 pubkey = generatePubkey(secretKey);
+        uint256 expectedCommitment = generateCommitment(amount, secretKey);
 
         // Record initial state
         uint256 initialBalance = address(mixer).balance;
         uint256 initialLeafIndex = mixer.currentLeafIndex();
 
-        // Perform deposit
+        // Perform deposit and capture event
         vm.startPrank(user1);
-        mixer.deposit{value: amount}(commitment);
+        vm.expectEmit(true, true, true, true, address(mixer));
+        emit PrivateMixer.Deposit(expectedCommitment, amount, user1);
+        mixer.deposit{value: amount}(pubkey);
         vm.stopPrank();
 
         // Verify deposit was successful
@@ -90,21 +96,16 @@ contract PrivateMixerTest is Test {
 
     function testMultipleDeposits() public {
         uint256 numDeposits = 5;
-        uint256[] memory commitments = new uint256[](numDeposits);
+        uint256[] memory pubkeys = new uint256[](numDeposits);
         uint256[] memory amounts = new uint256[](numDeposits);
+        uint256[] memory expectedCommitments = new uint256[](numDeposits);
 
-        // Generate commitments with varying amounts
+        // Generate pubkeys and expected commitments with varying amounts
         for (uint256 i = 0; i < numDeposits; i++) {
             amounts[i] = (i + 1) * 0.5 ether;
-            uint256 randomness = uint256(
-                keccak256(abi.encode(block.timestamp, i))
-            );
             uint256 secretKey = uint256(keccak256(abi.encode("secret", i)));
-            commitments[i] = generateCommitment(
-                amounts[i],
-                randomness,
-                secretKey
-            );
+            pubkeys[i] = generatePubkey(secretKey);
+            expectedCommitments[i] = generateCommitment(amounts[i], secretKey);
         }
 
         uint256 initialBalance = address(mixer).balance;
@@ -114,7 +115,9 @@ contract PrivateMixerTest is Test {
         // Perform multiple deposits
         for (uint256 i = 0; i < numDeposits; i++) {
             vm.startPrank(user1);
-            mixer.deposit{value: amounts[i]}(commitments[i]);
+            vm.expectEmit(true, true, true, true, address(mixer));
+            emit PrivateMixer.Deposit(expectedCommitments[i], amounts[i], user1);
+            mixer.deposit{value: amounts[i]}(pubkeys[i]);
             vm.stopPrank();
             totalDeposited += amounts[i];
         }
@@ -133,26 +136,25 @@ contract PrivateMixerTest is Test {
     }
 
     function testDepositWithZeroValue() public {
-        uint256 randomness = 123456;
         uint256 secretKey = 789012;
-        uint256 commitment = generateCommitment(0, randomness, secretKey);
+        uint256 pubkey = generatePubkey(secretKey);
 
         vm.startPrank(user1);
-        vm.expectRevert("Amount must be greater than 0");
-        mixer.deposit{value: 0}(commitment);
+        vm.expectRevert(abi.encodeWithSelector(PrivateMixer.InvalidAmount.selector));
+        mixer.deposit{value: 0}(pubkey);
         vm.stopPrank();
     }
 
-    function testDepositWithZeroCommitment() public {
+    function testDepositWithZeroPubkey() public {
         vm.startPrank(user1);
-        vm.expectRevert("Invalid commitment");
+        vm.expectRevert(abi.encodeWithSelector(PrivateMixer.InvalidPubkey.selector));
         mixer.deposit{value: 1 ether}(0);
         vm.stopPrank();
     }
 
     function testDepositWhenPaused() public {
         uint256 amount = 1 ether;
-        uint256 commitment = generateCommitment(amount, 123456, 789012);
+        uint256 pubkey = generatePubkey(789012);
 
         // Pause the contract
         mixer.pause();
@@ -160,14 +162,14 @@ contract PrivateMixerTest is Test {
         // Try to deposit
         vm.startPrank(user1);
         vm.expectRevert(Pausable.EnforcedPause.selector);
-        mixer.deposit{value: amount}(commitment);
+        mixer.deposit{value: amount}(pubkey);
         vm.stopPrank();
 
         // Unpause and verify deposit works
         mixer.unpause();
 
         vm.startPrank(user1);
-        mixer.deposit{value: amount}(commitment);
+        mixer.deposit{value: amount}(pubkey);
         vm.stopPrank();
 
         assertEq(
@@ -184,18 +186,11 @@ contract PrivateMixerTest is Test {
         // Make more deposits than history size
         for (uint256 i = 0; i < historySize + 2; i++) {
             uint256 amount = 0.1 ether;
-            uint256 randomness = uint256(
-                keccak256(abi.encode(block.timestamp, i))
-            );
             uint256 secretKey = uint256(keccak256(abi.encode("key", i)));
-            uint256 commitment = generateCommitment(
-                amount,
-                randomness,
-                secretKey
-            );
+            uint256 pubkey = generatePubkey(secretKey);
 
             vm.startPrank(user1);
-            mixer.deposit{value: amount}(commitment);
+            mixer.deposit{value: amount}(pubkey);
             vm.stopPrank();
 
             roots[i] = mixer.roots(
@@ -231,17 +226,15 @@ contract PrivateMixerTest is Test {
     function testDepositAndWithdrawal() public {
         // Step 1: Make a deposit
         uint256 depositAmount = 1 ether;
-        uint256 randomness = 123456789;
         uint256 secretKey = 987654321;
 
-        uint256 commitment = generateCommitment(
-            depositAmount,
-            randomness,
-            secretKey
-        );
+        uint256 pubkey = generatePubkey(secretKey);
+        uint256 commitment = generateCommitment(depositAmount, secretKey);
 
         vm.startPrank(user1);
-        mixer.deposit{value: depositAmount}(commitment);
+        vm.expectEmit(true, true, true, true, address(mixer));
+        emit PrivateMixer.Deposit(commitment, depositAmount, user1);
+        mixer.deposit{value: depositAmount}(pubkey);
         vm.stopPrank();
 
         uint256 merkleRoot = mixer.roots(mixer.currentRootIndex() - 1);
@@ -252,17 +245,16 @@ contract PrivateMixerTest is Test {
         uint256 recipient = uint256(uint160(user2));
 
         // Call the proof generation script via FFI
-        string[] memory args = new string[](11);
+        string[] memory args = new string[](10);
         args[0] = "node";
         args[1] = "../dist/contracts-evm/scripts/generate_withdrawal_proof.js";
         args[2] = vm.toString(depositAmount); // noteAmount
-        args[3] = vm.toString(randomness); // noteRandomness
-        args[4] = vm.toString(secretKey); // noteSecretKey
-        args[5] = "0"; // commitmentIndex (first deposit)
-        args[6] = vm.toString(withdrawAmount); // withdrawAmount
-        args[7] = vm.toString(recipient); // recipient
-        args[8] = vm.toString(relayFee); // relayFee
-        args[9] = vm.toString(commitment); // commitment list (just one for now)
+        args[3] = vm.toString(secretKey); // noteSecretKey
+        args[4] = "0"; // commitmentIndex (first deposit)
+        args[5] = vm.toString(withdrawAmount); // withdrawAmount
+        args[6] = vm.toString(recipient); // recipient
+        args[7] = vm.toString(relayFee); // relayFee
+        args[8] = vm.toString(commitment); // commitment list (just one for now)
 
         bytes memory result = vm.ffi(args);
 

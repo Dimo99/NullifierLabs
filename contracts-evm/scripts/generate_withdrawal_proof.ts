@@ -117,7 +117,6 @@ async function generateMerkleProof(
 
 async function generateWithdrawalProof(
   noteAmount: bigint,
-  noteRandomness: bigint,
   noteSecretKey: bigint,
   commitments: bigint[],
   commitmentIndex: number,
@@ -133,7 +132,7 @@ async function generateWithdrawalProof(
 
     // Generate commitment
     const commitment = BigInt(
-      poseidon.F.toString(poseidon([noteAmount, noteRandomness, pubkey]))
+      poseidon.F.toString(poseidon([noteAmount, pubkey]))
     );
 
     // Verify the commitment matches what's expected at the given index
@@ -145,14 +144,15 @@ async function generateWithdrawalProof(
 
     // Generate nullifier
     const nullifier = poseidon.F.toString(
-      poseidon([noteSecretKey, noteRandomness])
+      poseidon([noteSecretKey, commitment])
     );
 
     // Generate new commitment (for change note)
-    const newRandomness = BigInt("999888777666555444"); // In practice, this would be random
+    const newSecretKey = BigInt("999888777666555444"); // In practice, this would be random
     const changeAmount = noteAmount - withdrawAmount - relayFee;
+    const newPubkey = poseidon.F.toString(poseidon([newSecretKey]));
     const newCommitment = poseidon.F.toString(
-      poseidon([changeAmount, newRandomness, pubkey])
+      poseidon([changeAmount, newPubkey])
     );
 
     // Build Merkle tree and generate proof
@@ -168,10 +168,8 @@ async function generateWithdrawalProof(
     const circuitInputs = {
       // Private inputs
       note_amount: noteAmount.toString(),
-      note_randomness: noteRandomness.toString(),
       note_secret_key: noteSecretKey.toString(),
-      new_note_randomness: newRandomness.toString(),
-      new_note_secret_key: noteSecretKey.toString(),
+      new_note_secret_key: newSecretKey.toString(),
 
       // Merkle proof
       merkle_path_elements: merkleProof.map((p) => p.toString()),
@@ -217,23 +215,22 @@ async function main() {
   try {
     const args = process.argv.slice(2);
 
-    if (args.length < 8) {
+    if (args.length < 7) {
       console.error(
-        "Usage: generate_withdrawal_proof.ts <noteAmount> <noteRandomness> <noteSecretKey> <commitmentIndex> <withdrawAmount> <recipient> <relayFee> <commitment1> [commitment2] [commitment3] ..."
+        "Usage: generate_withdrawal_proof.ts <noteAmount> <noteSecretKey> <commitmentIndex> <withdrawAmount> <recipient> <relayFee> <commitment1> [commitment2] [commitment3] ..."
       );
       process.exit(1);
     }
 
     const noteAmount = BigInt(args[0]);
-    const noteRandomness = BigInt(args[1]);
-    const noteSecretKey = BigInt(args[2]);
-    const commitmentIndex = parseInt(args[3]);
-    const withdrawAmount = BigInt(args[4]);
-    const recipient = BigInt(args[5]);
-    const relayFee = BigInt(args[6]);
+    const noteSecretKey = BigInt(args[1]);
+    const commitmentIndex = parseInt(args[2]);
+    const withdrawAmount = BigInt(args[3]);
+    const recipient = BigInt(args[4]);
+    const relayFee = BigInt(args[5]);
 
     // Parse all commitments from the remaining arguments
-    const commitments = args.slice(7).map((arg) => BigInt(arg));
+    const commitments = args.slice(6).map((arg) => BigInt(arg));
 
     if (commitmentIndex >= commitments.length) {
       throw new Error(
@@ -243,7 +240,6 @@ async function main() {
 
     const result = await generateWithdrawalProof(
       noteAmount,
-      noteRandomness,
       noteSecretKey,
       commitments,
       commitmentIndex,

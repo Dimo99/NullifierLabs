@@ -16,10 +16,8 @@ template Withdraw(MERKLE_DEPTH) {
 
     // Private note inputs
     signal input note_amount;
-    signal input note_randomness;
     signal input note_secret_key;
 
-    signal input new_note_randomness;
     signal input new_note_secret_key;
 
     // Merkle path
@@ -29,12 +27,12 @@ template Withdraw(MERKLE_DEPTH) {
     signal output nullifier;
     signal output new_commitment;
 
-    // 1. Check nullifier
-    nullifier <== Nullifier()(note_secret_key, note_randomness);
-
-    // 2. Check note commitment
+    // 1. Check note commitment
     signal note_pubkey <== Poseidon(1)([note_secret_key]);
-    signal commitment <== NoteCommitment()(note_amount, note_randomness, note_pubkey);
+    signal commitment <== NoteCommitment()(note_amount, note_pubkey);
+
+    // 2. Check nullifier
+    nullifier <== Nullifier()(note_secret_key, commitment);
 
     // 3. Merkle proof
     component merkle = MerkleProof(MERKLE_DEPTH);
@@ -61,7 +59,7 @@ template Withdraw(MERKLE_DEPTH) {
 
     signal new_amount <== note_amount - withdrawTotal;
     signal new_pubkey <== Poseidon(1)([new_note_secret_key]);
-    new_commitment <== NoteCommitment()(new_amount, new_note_randomness, new_pubkey);
+    new_commitment <== NoteCommitment()(new_amount, new_pubkey);
 
     signal relayFeeSquared;
     relayFeeSquared <== relay_fee * relay_fee;

@@ -118,10 +118,8 @@ function generateFullWithdrawTest(): CircuitTestCase {
 
             // Generate random note values
             const note_amount = randomBigInt(8); // 64-bit for manageable size
-            const note_randomness = randomBigInt(16); // 128-bit
             const note_secret_key = randomBigInt(32); // 256-bit
 
-            const new_note_randomness = randomBigInt(16); // 128-bit
             const new_note_secret_key = randomBigInt(32); // 256-bit
 
             // Full withdrawal: withdraw_amount + relay_fee = note_amount
@@ -133,7 +131,7 @@ function generateFullWithdrawTest(): CircuitTestCase {
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
 
             // Calculate note commitment
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             // Generate random Merkle path
             const merkle_path_elements: bigint[] = [];
@@ -155,12 +153,12 @@ function generateFullWithdrawTest(): CircuitTestCase {
             const merkle_root = cur;
 
             // Calculate expected nullifier
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
 
             // Calculate new commitment (should be for amount = 0)
             const new_amount = BigInt(0); // Full withdrawal leaves 0
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -168,9 +166,7 @@ function generateFullWithdrawTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(),
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -212,10 +208,8 @@ function generateZeroRelayFeeTest(): CircuitTestCase {
 
             // Generate random note values
             let note_amount = randomBigInt(8); // 64-bit
-            const note_randomness = randomBigInt(16); // 128-bit
             const note_secret_key = randomBigInt(32); // 256-bit
 
-            const new_note_randomness = randomBigInt(16); // 128-bit
             const new_note_secret_key = randomBigInt(32); // 256-bit
 
             // Zero relay fee
@@ -233,7 +227,7 @@ function generateZeroRelayFeeTest(): CircuitTestCase {
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
 
             // Calculate note commitment
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             // Generate random Merkle path
             const merkle_path_elements: bigint[] = [];
@@ -255,13 +249,13 @@ function generateZeroRelayFeeTest(): CircuitTestCase {
             const merkle_root = cur;
 
             // Calculate expected nullifier
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
 
             // Calculate new commitment
             const withdrawTotal = withdraw_amount + relay_fee; // relay_fee is 0
             const new_amount = note_amount - withdrawTotal;
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -269,9 +263,7 @@ function generateZeroRelayFeeTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(),
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -317,11 +309,9 @@ function generateMaxValuesTest(): CircuitTestCase {
             
             // Use values that are large but safe
             const note_amount = max252 - BigInt(1000000); // Very large note
-            const note_randomness = randomBigInt(31); // Keep randomness manageable
             const note_secret_key = randomBigInt(31); // Keep key manageable
 
-            const new_note_randomness = randomBigInt(31);
-            const new_note_secret_key = randomBigInt(31);
+                        const new_note_secret_key = randomBigInt(31);
 
             // Large but manageable fees and amounts
             const relay_fee = BigInt(1000000); // Large relay fee
@@ -332,7 +322,7 @@ function generateMaxValuesTest(): CircuitTestCase {
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
 
             // Calculate note commitment
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             // Generate random Merkle path
             const merkle_path_elements: bigint[] = [];
@@ -354,13 +344,13 @@ function generateMaxValuesTest(): CircuitTestCase {
             const merkle_root = cur;
 
             // Calculate expected nullifier
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
 
             // Calculate new commitment
             const withdrawTotal = withdraw_amount + relay_fee;
             const new_amount = note_amount - withdrawTotal;
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -368,9 +358,7 @@ function generateMaxValuesTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(),
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -412,11 +400,9 @@ function generateMinValuesTest(): CircuitTestCase {
 
             // Use minimal values
             const note_amount = BigInt(3); // Minimal note that allows withdrawal + fee
-            const note_randomness = BigInt(1); // Minimal randomness
             const note_secret_key = BigInt(1); // Minimal secret key
 
-            const new_note_randomness = BigInt(1);
-            const new_note_secret_key = BigInt(1);
+                        const new_note_secret_key = BigInt(1);
 
             // Minimal amounts
             const relay_fee = BigInt(1); // Minimal relay fee
@@ -427,7 +413,7 @@ function generateMinValuesTest(): CircuitTestCase {
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
 
             // Calculate note commitment
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             // Generate random Merkle path
             const merkle_path_elements: bigint[] = [];
@@ -449,13 +435,13 @@ function generateMinValuesTest(): CircuitTestCase {
             const merkle_root = cur;
 
             // Calculate expected nullifier
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
 
             // Calculate new commitment
             const withdrawTotal = withdraw_amount + relay_fee; // 1 + 1 = 2
             const new_amount = note_amount - withdrawTotal; // 3 - 2 = 1
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -463,9 +449,7 @@ function generateMinValuesTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(),
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -507,11 +491,9 @@ function generateLeftmostLeafTest(): CircuitTestCase {
 
             // Generate random note values
             const note_amount = randomBigInt(8); // 64-bit
-            const note_randomness = randomBigInt(16); // 128-bit
             const note_secret_key = randomBigInt(32); // 256-bit
 
-            const new_note_randomness = randomBigInt(16); // 128-bit
-            const new_note_secret_key = randomBigInt(32); // 256-bit
+                        const new_note_secret_key = randomBigInt(32); // 256-bit
 
             // Withdrawal parameters
             const relay_fee = randomBigInt(4); // 32-bit
@@ -522,7 +504,7 @@ function generateLeftmostLeafTest(): CircuitTestCase {
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
 
             // Calculate note commitment
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             // Generate Merkle path with all path_indices = 0 (leftmost leaf)
             const merkle_path_elements: bigint[] = [];
@@ -539,13 +521,13 @@ function generateLeftmostLeafTest(): CircuitTestCase {
             const merkle_root = cur;
 
             // Calculate expected nullifier
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
 
             // Calculate new commitment
             const withdrawTotal = withdraw_amount + relay_fee;
             const new_amount = note_amount - withdrawTotal;
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -553,9 +535,7 @@ function generateLeftmostLeafTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(),
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -598,11 +578,9 @@ function generateRightmostLeafTest(): CircuitTestCase {
 
             // Generate random note values
             const note_amount = randomBigInt(8); // 64-bit
-            const note_randomness = randomBigInt(16); // 128-bit
             const note_secret_key = randomBigInt(32); // 256-bit
 
-            const new_note_randomness = randomBigInt(16); // 128-bit
-            const new_note_secret_key = randomBigInt(32); // 256-bit
+                        const new_note_secret_key = randomBigInt(32); // 256-bit
 
             // Withdrawal parameters
             const relay_fee = randomBigInt(4); // 32-bit
@@ -613,7 +591,7 @@ function generateRightmostLeafTest(): CircuitTestCase {
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
 
             // Calculate note commitment
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             // Generate Merkle path with all path_indices = 1 (rightmost leaf)
             const merkle_path_elements: bigint[] = [];
@@ -630,13 +608,13 @@ function generateRightmostLeafTest(): CircuitTestCase {
             const merkle_root = cur;
 
             // Calculate expected nullifier
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
 
             // Calculate new commitment
             const withdrawTotal = withdraw_amount + relay_fee;
             const new_amount = note_amount - withdrawTotal;
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -644,9 +622,7 @@ function generateRightmostLeafTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(),
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -689,11 +665,9 @@ function generateZeroRecipientTest(): CircuitTestCase {
 
             // Generate random note values
             const note_amount = randomBigInt(8); // 64-bit
-            const note_randomness = randomBigInt(16); // 128-bit
             const note_secret_key = randomBigInt(32); // 256-bit
 
-            const new_note_randomness = randomBigInt(16); // 128-bit
-            const new_note_secret_key = randomBigInt(32); // 256-bit
+                        const new_note_secret_key = randomBigInt(32); // 256-bit
 
             // Withdrawal parameters with zero recipient
             const relay_fee = randomBigInt(4); // 32-bit
@@ -704,7 +678,7 @@ function generateZeroRecipientTest(): CircuitTestCase {
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
 
             // Calculate note commitment
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             // Generate random Merkle path
             const merkle_path_elements: bigint[] = [];
@@ -726,13 +700,13 @@ function generateZeroRecipientTest(): CircuitTestCase {
             const merkle_root = cur;
 
             // Calculate expected nullifier
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
 
             // Calculate new commitment
             const withdrawTotal = withdraw_amount + relay_fee;
             const new_amount = note_amount - withdrawTotal;
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -740,9 +714,7 @@ function generateZeroRecipientTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(),
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -784,11 +756,9 @@ function generateSmallAmountTest(): CircuitTestCase {
 
             // Use very small values - minimal amounts that still allow proper operation
             const note_amount = BigInt(10); // Small note that allows withdrawal + fee + change
-            const note_randomness = randomBigInt(16); // Normal randomness
             const note_secret_key = randomBigInt(32); // Normal secret key
 
-            const new_note_randomness = randomBigInt(16);
-            const new_note_secret_key = randomBigInt(32);
+                        const new_note_secret_key = randomBigInt(32);
 
             // Very small amounts
             const relay_fee = BigInt(1); // 1 wei equivalent relay fee
@@ -799,7 +769,7 @@ function generateSmallAmountTest(): CircuitTestCase {
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
 
             // Calculate note commitment
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             // Generate random Merkle path
             const merkle_path_elements: bigint[] = [];
@@ -821,13 +791,13 @@ function generateSmallAmountTest(): CircuitTestCase {
             const merkle_root = cur;
 
             // Calculate expected nullifier
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
 
             // Calculate new commitment
             const withdrawTotal = withdraw_amount + relay_fee; // 1 + 1 = 2
             const new_amount = note_amount - withdrawTotal; // 10 - 2 = 8
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -835,9 +805,7 @@ function generateSmallAmountTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(),
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -879,11 +847,9 @@ function generateWithdrawTest(): CircuitTestCase {
 
             // Generate random note values
             let note_amount = randomBigInt(8); // 64-bit
-            const note_randomness = randomBigInt(16); // 128-bit
             const note_secret_key = randomBigInt(32); // 256-bit
 
-            const new_note_randomness = randomBigInt(16); // 128-bit
-            const new_note_secret_key = randomBigInt(32); // 256-bit
+                        const new_note_secret_key = randomBigInt(32); // 256-bit
 
             // Withdraw/fee/recipient
             let withdraw_amount = randomBigInt(8); // 64-bit
@@ -897,7 +863,7 @@ function generateWithdrawTest(): CircuitTestCase {
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
 
             // Calculate note commitment
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             // Generate random Merkle path
             const merkle_path_elements: bigint[] = [];
@@ -919,13 +885,13 @@ function generateWithdrawTest(): CircuitTestCase {
             const merkle_root = cur;
 
             // Calculate expected nullifier
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
 
             // Calculate new commitment
             const withdrawTotal = withdraw_amount + relay_fee;
             const new_amount = note_amount - withdrawTotal;
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -933,9 +899,7 @@ function generateWithdrawTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(),
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -977,11 +941,9 @@ function generateWrongMerkleRootTest(): CircuitTestCase {
 
             // Generate random note values
             const note_amount = randomBigInt(8); // 64-bit
-            const note_randomness = randomBigInt(16); // 128-bit
             const note_secret_key = randomBigInt(32); // 256-bit
 
-            const new_note_randomness = randomBigInt(16); // 128-bit
-            const new_note_secret_key = randomBigInt(32); // 256-bit
+                        const new_note_secret_key = randomBigInt(32); // 256-bit
 
             // Withdrawal parameters
             const relay_fee = randomBigInt(4); // 32-bit
@@ -992,7 +954,7 @@ function generateWrongMerkleRootTest(): CircuitTestCase {
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
 
             // Calculate note commitment
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             // Generate valid Merkle path first
             const merkle_path_elements: bigint[] = [];
@@ -1016,11 +978,11 @@ function generateWrongMerkleRootTest(): CircuitTestCase {
             const wrong_merkle_root = randomBigInt(31); // Random root, not the computed one
 
             // Calculate expected nullifier and new commitment (though test should fail)
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
             const withdrawTotal = withdraw_amount + relay_fee;
             const new_amount = note_amount - withdrawTotal;
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: wrong_merkle_root.toString(), // WRONG ROOT
@@ -1028,9 +990,7 @@ function generateWrongMerkleRootTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(),
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -1069,11 +1029,9 @@ function generateWrongPathElementsTest(): CircuitTestCase {
 
             // Generate random note values
             const note_amount = randomBigInt(8); // 64-bit
-            const note_randomness = randomBigInt(16); // 128-bit
             const note_secret_key = randomBigInt(32); // 256-bit
 
-            const new_note_randomness = randomBigInt(16); // 128-bit
-            const new_note_secret_key = randomBigInt(32); // 256-bit
+                        const new_note_secret_key = randomBigInt(32); // 256-bit
 
             // Withdrawal parameters
             const relay_fee = randomBigInt(4); // 32-bit
@@ -1084,7 +1042,7 @@ function generateWrongPathElementsTest(): CircuitTestCase {
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
 
             // Calculate note commitment
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             // Generate valid Merkle path to get correct root
             const valid_merkle_path_elements: bigint[] = [];
@@ -1112,11 +1070,11 @@ function generateWrongPathElementsTest(): CircuitTestCase {
             }
 
             // Calculate expected nullifier and new commitment (though test should fail)
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
             const withdrawTotal = withdraw_amount + relay_fee;
             const new_amount = note_amount - withdrawTotal;
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: merkle_root.toString(), // Correct root
@@ -1124,9 +1082,7 @@ function generateWrongPathElementsTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(),
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: wrong_merkle_path_elements.map(x => x.toString()), // WRONG ELEMENTS
                 merkle_path_indices: merkle_path_indices,
@@ -1166,11 +1122,9 @@ function generateWithdrawTooMuchTest(): CircuitTestCase {
 
             // Generate random note values
             const note_amount = randomBigInt(8); // 64-bit
-            const note_randomness = randomBigInt(16); // 128-bit
             const note_secret_key = randomBigInt(32); // 256-bit
 
-            const new_note_randomness = randomBigInt(16); // 128-bit
-            const new_note_secret_key = randomBigInt(32); // 256-bit
+                        const new_note_secret_key = randomBigInt(32); // 256-bit
 
             // INVALID: withdraw_amount > note_amount
             const relay_fee = BigInt(100); // Small relay fee
@@ -1181,7 +1135,7 @@ function generateWithdrawTooMuchTest(): CircuitTestCase {
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
 
             // Calculate note commitment
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             // Generate valid Merkle path
             const merkle_path_elements: bigint[] = [];
@@ -1203,11 +1157,11 @@ function generateWithdrawTooMuchTest(): CircuitTestCase {
             const merkle_root = cur;
 
             // Calculate expected nullifier and new commitment (though test should fail)
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
             const withdrawTotal = withdraw_amount + relay_fee;
             const new_amount = note_amount - withdrawTotal; // This will be negative!
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -1215,9 +1169,7 @@ function generateWithdrawTooMuchTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(),
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -1256,11 +1208,9 @@ function generateRelayFeeTooMuchTest(): CircuitTestCase {
 
             // Generate random note values
             const note_amount = randomBigInt(8); // 64-bit
-            const note_randomness = randomBigInt(16); // 128-bit
             const note_secret_key = randomBigInt(32); // 256-bit
 
-            const new_note_randomness = randomBigInt(16); // 128-bit
-            const new_note_secret_key = randomBigInt(32); // 256-bit
+                        const new_note_secret_key = randomBigInt(32); // 256-bit
 
             // INVALID: relay_fee > note_amount
             const withdraw_amount = BigInt(100); // Small withdraw amount
@@ -1271,7 +1221,7 @@ function generateRelayFeeTooMuchTest(): CircuitTestCase {
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
 
             // Calculate note commitment
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             // Generate valid Merkle path
             const merkle_path_elements: bigint[] = [];
@@ -1293,11 +1243,11 @@ function generateRelayFeeTooMuchTest(): CircuitTestCase {
             const merkle_root = cur;
 
             // Calculate expected nullifier and new commitment (though test should fail)
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
             const withdrawTotal = withdraw_amount + relay_fee;
             const new_amount = note_amount - withdrawTotal; // This will be negative!
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -1305,9 +1255,7 @@ function generateRelayFeeTooMuchTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(), // TOO LARGE
                 note_amount: note_amount.toString(),
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -1346,11 +1294,9 @@ function generateCombinedAmountTooMuchTest(): CircuitTestCase {
 
             // Generate random note values
             const note_amount = randomBigInt(8); // 64-bit
-            const note_randomness = randomBigInt(16); // 128-bit
             const note_secret_key = randomBigInt(32); // 256-bit
 
-            const new_note_randomness = randomBigInt(16); // 128-bit
-            const new_note_secret_key = randomBigInt(32); // 256-bit
+                        const new_note_secret_key = randomBigInt(32); // 256-bit
 
             // INVALID: withdraw_amount + relay_fee > note_amount
             // Each individually is less than note_amount, but combined they exceed it
@@ -1362,7 +1308,7 @@ function generateCombinedAmountTooMuchTest(): CircuitTestCase {
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
 
             // Calculate note commitment
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             // Generate valid Merkle path
             const merkle_path_elements: bigint[] = [];
@@ -1384,11 +1330,11 @@ function generateCombinedAmountTooMuchTest(): CircuitTestCase {
             const merkle_root = cur;
 
             // Calculate expected nullifier and new commitment (though test should fail)
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
             const withdrawTotal = withdraw_amount + relay_fee;
             const new_amount = note_amount - withdrawTotal; // This will be negative!
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -1396,9 +1342,7 @@ function generateCombinedAmountTooMuchTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(),
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -1437,12 +1381,10 @@ function generateWrongSecretKeyTest(): CircuitTestCase {
 
             // Generate random note values
             const note_amount = randomBigInt(8); // 64-bit
-            const note_randomness = randomBigInt(16); // 128-bit
             const note_secret_key = randomBigInt(32); // 256-bit
             const wrong_secret_key = randomBigInt(32); // DIFFERENT secret key
 
-            const new_note_randomness = randomBigInt(16); // 128-bit
-            const new_note_secret_key = randomBigInt(32); // 256-bit
+                        const new_note_secret_key = randomBigInt(32); // 256-bit
 
             // Withdrawal parameters
             const relay_fee = randomBigInt(4); // 32-bit
@@ -1453,7 +1395,7 @@ function generateWrongSecretKeyTest(): CircuitTestCase {
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
 
             // Calculate note commitment using CORRECT secret key
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             // Generate valid Merkle path
             const merkle_path_elements: bigint[] = [];
@@ -1475,11 +1417,11 @@ function generateWrongSecretKeyTest(): CircuitTestCase {
             const merkle_root = cur;
 
             // Calculate expected nullifier and new commitment (though test should fail)
-            const expected_nullifier = poseidon.F.toString(poseidon([wrong_secret_key, note_randomness])); // WRONG!
+            const expected_nullifier = poseidon.F.toString(poseidon([wrong_secret_key, commitment])); // WRONG!
             const withdrawTotal = withdraw_amount + relay_fee;
             const new_amount = note_amount - withdrawTotal;
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -1487,9 +1429,7 @@ function generateWrongSecretKeyTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(),
-                note_randomness: note_randomness.toString(),
                 note_secret_key: wrong_secret_key.toString(), // WRONG SECRET KEY
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -1518,97 +1458,6 @@ function generateWrongSecretKeyTest(): CircuitTestCase {
     };
 }
 
-// Generate failing test case: Wrong Note Randomness
-function generateWrongRandomnessTest(): CircuitTestCase {
-    return {
-        name: "Should Fail: Wrong Note Randomness",
-        inputGenerator: async () => {
-            // Build Poseidon
-            const poseidon = await buildPoseidon();
-
-            // Generate random note values
-            const note_amount = randomBigInt(8); // 64-bit
-            const note_randomness = randomBigInt(16); // 128-bit
-            const wrong_randomness = randomBigInt(16); // DIFFERENT randomness
-            const note_secret_key = randomBigInt(32); // 256-bit
-
-            const new_note_randomness = randomBigInt(16); // 128-bit
-            const new_note_secret_key = randomBigInt(32); // 256-bit
-
-            // Withdrawal parameters
-            const relay_fee = randomBigInt(4); // 32-bit
-            const withdraw_amount = note_amount - relay_fee - BigInt(1000); // Leave some change
-            const recipient = randomBigInt(20); // 160-bit
-
-            // Derive pubkey using correct secret key
-            const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
-
-            // Calculate note commitment using CORRECT randomness
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
-
-            // Generate valid Merkle path
-            const merkle_path_elements: bigint[] = [];
-            const merkle_path_indices: number[] = [];
-            let cur = BigInt(commitment);
-            for (let i = 0; i < MERKLE_DEPTH; i++) {
-                merkle_path_elements.push(randomBigInt(31));
-                merkle_path_indices.push(randomBit());
-                let left: bigint, right: bigint;
-                if (merkle_path_indices[i] === 0) {
-                    left = cur;
-                    right = merkle_path_elements[i];
-                } else {
-                    left = merkle_path_elements[i];
-                    right = cur;
-                }
-                cur = poseidon.F.toObject(poseidon([left, right]));
-            }
-            const merkle_root = cur;
-
-            // Calculate expected nullifier and new commitment (though test should fail)
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, wrong_randomness])); // WRONG!
-            const withdrawTotal = withdraw_amount + relay_fee;
-            const new_amount = note_amount - withdrawTotal;
-            const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
-
-            const input = {
-                merkle_root: merkle_root.toString(),
-                withdraw_amount: withdraw_amount.toString(),
-                recipient: recipient.toString(),
-                relay_fee: relay_fee.toString(),
-                note_amount: note_amount.toString(),
-                note_randomness: wrong_randomness.toString(), // WRONG RANDOMNESS
-                note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
-                new_note_secret_key: new_note_secret_key.toString(),
-                merkle_path_elements: merkle_path_elements.map(x => x.toString()),
-                merkle_path_indices: merkle_path_indices,
-            };
-
-            const expected: WithdrawExpected = {
-                nullifier: expected_nullifier,
-                newCommitment: expected_new_commitment,
-                merkleRoot: merkle_root.toString(),
-                withdrawAmount: withdraw_amount.toString(),
-                recipient: recipient.toString(),
-                relayFee: relay_fee.toString()
-            };
-
-            return { input, expected };
-        },
-        logInputs: (input, expected) => {
-            console.log('📝 Test inputs (Should Fail - Wrong Note Randomness):');
-            console.log(`  Note amount: ${input.note_amount}`);
-            console.log(`  Withdraw amount: ${expected.withdrawAmount}`);
-            console.log(`  Relay fee: ${expected.relayFee}`);
-            console.log(`  Note randomness: WRONG (doesn't match the one used for commitment)`);
-            console.log(`  ❌ This should FAIL because note_randomness doesn't match note commitment\n`);
-        },
-        shouldFail: true
-    };
-}
-
 // Generate failing test case: Wrong Note Amount
 function generateWrongNoteAmountTest(): CircuitTestCase {
     return {
@@ -1620,11 +1469,9 @@ function generateWrongNoteAmountTest(): CircuitTestCase {
             // Generate random note values
             const note_amount = randomBigInt(8); // 64-bit - correct amount
             const wrong_note_amount = randomBigInt(8); // DIFFERENT amount
-            const note_randomness = randomBigInt(16); // 128-bit
             const note_secret_key = randomBigInt(32); // 256-bit
 
-            const new_note_randomness = randomBigInt(16); // 128-bit
-            const new_note_secret_key = randomBigInt(32); // 256-bit
+                        const new_note_secret_key = randomBigInt(32); // 256-bit
 
             // Withdrawal parameters based on wrong amount to avoid separate validation failures
             const relay_fee = randomBigInt(4); // 32-bit
@@ -1635,7 +1482,7 @@ function generateWrongNoteAmountTest(): CircuitTestCase {
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
 
             // Calculate note commitment using CORRECT amount (what's actually in Merkle tree)
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             // Generate valid Merkle path for the CORRECT commitment
             const merkle_path_elements: bigint[] = [];
@@ -1657,11 +1504,11 @@ function generateWrongNoteAmountTest(): CircuitTestCase {
             const merkle_root = cur;
 
             // Calculate expected nullifier and new commitment (though test should fail)
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
             const withdrawTotal = withdraw_amount + relay_fee;
             const new_amount = wrong_note_amount - withdrawTotal; // Based on wrong amount
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -1669,9 +1516,7 @@ function generateWrongNoteAmountTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: wrong_note_amount.toString(), // WRONG AMOUNT
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -1713,11 +1558,9 @@ function generateFieldOverflowTest(): CircuitTestCase {
             const fieldOverflow = (BigInt(1) << BigInt(255)); // This should cause field overflow
             
             const note_amount = fieldOverflow; // Overflow amount
-            const note_randomness = randomBigInt(16);
             const note_secret_key = randomBigInt(32);
 
-            const new_note_randomness = randomBigInt(16);
-            const new_note_secret_key = randomBigInt(32);
+                        const new_note_secret_key = randomBigInt(32);
 
             const relay_fee = BigInt(1000);
             const withdraw_amount = BigInt(1000);
@@ -1725,7 +1568,7 @@ function generateFieldOverflowTest(): CircuitTestCase {
 
             // This should fail during witness generation due to field overflow
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             const merkle_path_elements: bigint[] = [];
             const merkle_path_indices: number[] = [];
@@ -1745,10 +1588,10 @@ function generateFieldOverflowTest(): CircuitTestCase {
             }
             const merkle_root = cur;
 
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
             const new_amount = note_amount - withdraw_amount - relay_fee;
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -1756,9 +1599,7 @@ function generateFieldOverflowTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(), // This will overflow
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -1801,18 +1642,16 @@ function generateFieldModulusBoundaryTest(): CircuitTestCase {
             
             // Use the modulus itself (which should be invalid - should be reduced to 0)
             const note_amount = BN254_MODULUS; // This is >= field modulus
-            const note_randomness = randomBigInt(16);
             const note_secret_key = randomBigInt(32);
 
-            const new_note_randomness = randomBigInt(16);
-            const new_note_secret_key = randomBigInt(32);
+                        const new_note_secret_key = randomBigInt(32);
 
             const relay_fee = BigInt(1000);
             const withdraw_amount = BigInt(1000);
             const recipient = randomBigInt(20);
 
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
 
             const merkle_path_elements: bigint[] = [];
             const merkle_path_indices: number[] = [];
@@ -1832,10 +1671,10 @@ function generateFieldModulusBoundaryTest(): CircuitTestCase {
             }
             const merkle_root = cur;
 
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
             const new_amount = note_amount - withdraw_amount - relay_fee;
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
 
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -1843,9 +1682,7 @@ function generateFieldModulusBoundaryTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(), // Field modulus
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -1883,11 +1720,9 @@ function generateArithmeticUnderflowTest(): CircuitTestCase {
             
             // Use very small note amount to trigger underflow when subtracting withdraw_amount + relay_fee
             const note_amount = BigInt(100); // Small amount
-            const note_randomness = randomBigInt(16);
             const note_secret_key = randomBigInt(32);
             
-            const new_note_randomness = randomBigInt(16);
-            const new_note_secret_key = randomBigInt(32);
+                        const new_note_secret_key = randomBigInt(32);
             
             // Large amounts that would cause arithmetic underflow in field
             const withdraw_amount = BigInt(1000); // Much larger than note_amount
@@ -1895,7 +1730,7 @@ function generateArithmeticUnderflowTest(): CircuitTestCase {
             const recipient = randomBigInt(20);
             
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
             
             const merkle_path_elements: bigint[] = [];
             const merkle_path_indices: number[] = [];
@@ -1920,9 +1755,9 @@ function generateArithmeticUnderflowTest(): CircuitTestCase {
             const BN254_MODULUS = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
             const new_amount = (note_amount - withdrawTotal + BN254_MODULUS) % BN254_MODULUS; // Field underflow behavior
             
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
             
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -1930,9 +1765,7 @@ function generateArithmeticUnderflowTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(),
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -1976,11 +1809,9 @@ function generateAdditionOverflowAttackTest(): CircuitTestCase {
             // Large note amount to support the attack
             const MAX_252_BIT = (BigInt(1) << BigInt(252)) - BigInt(1);
             const note_amount = MAX_252_BIT; // Maximum 252-bit value
-            const note_randomness = randomBigInt(16);
             const note_secret_key = randomBigInt(32);
             
-            const new_note_randomness = randomBigInt(16);
-            const new_note_secret_key = randomBigInt(32);
+                        const new_note_secret_key = randomBigInt(32);
             
             // ATTACK: Try to cause overflow in withdraw_amount + relay_fee
             // Both values are large but individually fit in 252 bits
@@ -1990,7 +1821,7 @@ function generateAdditionOverflowAttackTest(): CircuitTestCase {
             const recipient = randomBigInt(20);
             
             const note_pubkey = poseidon.F.toString(poseidon([note_secret_key]));
-            const commitment = poseidon.F.toString(poseidon([note_amount, note_randomness, note_pubkey]));
+            const commitment = poseidon.F.toString(poseidon([note_amount, note_pubkey]));
             
             const merkle_path_elements: bigint[] = [];
             const merkle_path_indices: number[] = [];
@@ -2010,11 +1841,11 @@ function generateAdditionOverflowAttackTest(): CircuitTestCase {
             }
             const merkle_root = cur;
             
-            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, note_randomness]));
+            const expected_nullifier = poseidon.F.toString(poseidon([note_secret_key, commitment]));
             const withdrawTotal = withdraw_amount + relay_fee; // This should overflow 252 bits
             const new_amount = note_amount - withdrawTotal;
             const new_pubkey = poseidon.F.toString(poseidon([new_note_secret_key]));
-            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_note_randomness, new_pubkey]));
+            const expected_new_commitment = poseidon.F.toString(poseidon([new_amount, new_pubkey]));
             
             const input = {
                 merkle_root: merkle_root.toString(),
@@ -2022,9 +1853,7 @@ function generateAdditionOverflowAttackTest(): CircuitTestCase {
                 recipient: recipient.toString(),
                 relay_fee: relay_fee.toString(),
                 note_amount: note_amount.toString(),
-                note_randomness: note_randomness.toString(),
                 note_secret_key: note_secret_key.toString(),
-                new_note_randomness: new_note_randomness.toString(),
                 new_note_secret_key: new_note_secret_key.toString(),
                 merkle_path_elements: merkle_path_elements.map(x => x.toString()),
                 merkle_path_indices: merkle_path_indices,
@@ -2083,7 +1912,6 @@ async function main() {
             generateRelayFeeTooMuchTest(),
             generateCombinedAmountTooMuchTest(),
             generateWrongSecretKeyTest(),
-            generateWrongRandomnessTest(),
             generateWrongNoteAmountTest(),
             generateFieldOverflowTest(),
             generateFieldModulusBoundaryTest(),

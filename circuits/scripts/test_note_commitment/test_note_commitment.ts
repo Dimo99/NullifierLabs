@@ -47,7 +47,6 @@ function generateNoteCommitmentTest(): CircuitTestCase {
         inputGenerator: async () => {
             // Generate random inputs
             const amount = randomBigInt(8); // 64-bit
-            const note_randomness = randomBigInt(16); // 128-bit
             const secret_key = randomBigInt(32); // 256-bit
 
             // Build Poseidon
@@ -57,11 +56,10 @@ function generateNoteCommitmentTest(): CircuitTestCase {
             const pubkey = poseidon.F.toString(poseidon([secret_key]));
             
             // Calculate expected commitment using circomlibjs Poseidon
-            const expected = poseidon.F.toString(poseidon([amount, note_randomness, pubkey]));
+            const expected = poseidon.F.toString(poseidon([amount, pubkey]));
 
             const input = {
                 amount: amount.toString(),
-                note_randomness: note_randomness.toString(),
                 pubkey: pubkey.toString(),
             };
 
@@ -70,7 +68,6 @@ function generateNoteCommitmentTest(): CircuitTestCase {
         logInputs: (input, expected) => {
             console.log('📝 Test inputs:');
             console.log(`  Amount: ${input.amount}`);
-            console.log(`  Note randomness: ${input.note_randomness}`);
             console.log(`  Pubkey: ${input.pubkey}`);
             console.log(`  Expected commitment: ${expected}\n`);
         },

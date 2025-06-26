@@ -47,15 +47,23 @@ function generateNullifierTest(): CircuitTestCase {
         inputGenerator: async () => {
             // Generate random inputs
             const secret_key = randomBigInt(31);
-            const note_randomness = randomBigInt(31);
+            const amount = randomBigInt(8);
 
             // Build Poseidon
             const poseidon = await buildPoseidon();
-            const expected = poseidon.F.toString(poseidon([secret_key, note_randomness]));
+            
+            // Derive pubkey as Poseidon(secret_key)
+            const pubkey = poseidon.F.toString(poseidon([secret_key]));
+            
+            // Calculate commitment as Poseidon(amount, pubkey)
+            const commitment = poseidon.F.toString(poseidon([amount, pubkey]));
+            
+            // Calculate expected nullifier as Poseidon(secret_key, commitment)
+            const expected = poseidon.F.toString(poseidon([secret_key, commitment]));
 
             const input = {
                 secret_key: secret_key.toString(),
-                note_randomness: note_randomness.toString(),
+                commitment: commitment.toString(),
             };
 
             return { input, expected };
@@ -63,7 +71,7 @@ function generateNullifierTest(): CircuitTestCase {
         logInputs: (input, expected) => {
             console.log('📝 Test inputs:');
             console.log(`  Secret key: ${input.secret_key}`);
-            console.log(`  Note randomness: ${input.note_randomness}`);
+            console.log(`  Commitment: ${input.commitment}`);
             console.log(`  Expected nullifier: ${expected}\n`);
         },
         witnessVerifier: verifyNullifier,
