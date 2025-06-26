@@ -3,11 +3,15 @@
 import { useState } from 'react';
 import { useWallet } from '../hooks/useWallet';
 import { SecretGenerator } from '../components/SecretGenerator';
+import { DepositPage } from '../components/DepositPage';
+import { DepositSuccess } from '../components/DepositSuccess';
 
 export default function Home() {
   const { account, isConnected, isConnecting, error, connectWallet, disconnectWallet } = useWallet();
   const [showSecretGenerator, setShowSecretGenerator] = useState(false);
+  const [currentView, setCurrentView] = useState<'home' | 'deposit' | 'success'>('home');
   const [generatedSecret, setGeneratedSecret] = useState<string | null>(null);
+  const [completedDeposit, setCompletedDeposit] = useState<{encodedSecret: string, txHash: string} | null>(null);
 
   const handleStartDeposit = () => {
     setShowSecretGenerator(true);
@@ -16,14 +20,55 @@ export default function Home() {
   const handleSecretGenerated = (secretKey: string) => {
     setGeneratedSecret(secretKey);
     setShowSecretGenerator(false);
-    // TODO: Navigate to deposit page with secret key
-    console.log('Secret key generated:', secretKey);
+    setCurrentView('deposit');
   };
 
   const handleCancelGeneration = () => {
     setShowSecretGenerator(false);
   };
 
+  const handleDepositComplete = (encodedSecret: string, txHash: string) => {
+    setCompletedDeposit({ encodedSecret, txHash });
+    setCurrentView('success');
+  };
+
+  const handleBackToHome = () => {
+    setCurrentView('home');
+    setGeneratedSecret(null);
+    setCompletedDeposit(null);
+  };
+
+  const handleNewDeposit = () => {
+    setCurrentView('home');
+    setGeneratedSecret(null);
+    setCompletedDeposit(null);
+    // Automatically start new deposit
+    setTimeout(() => setShowSecretGenerator(true), 100);
+  };
+
+  // Show deposit page
+  if (currentView === 'deposit' && generatedSecret) {
+    return (
+      <DepositPage
+        secretKey={generatedSecret}
+        onBack={handleBackToHome}
+        onComplete={handleDepositComplete}
+      />
+    );
+  }
+
+  // Show success page
+  if (currentView === 'success' && completedDeposit) {
+    return (
+      <DepositSuccess
+        encodedSecret={completedDeposit.encodedSecret}
+        txHash={completedDeposit.txHash}
+        onNewDeposit={handleNewDeposit}
+      />
+    );
+  }
+
+  // Show home page
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white">
       {/* Header */}
