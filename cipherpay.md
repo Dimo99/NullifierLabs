@@ -1,6 +1,6 @@
 # 🔐 Introducing CipherPay: Private Payments with ZK on Solana
 
-**CipherPay** is a zero-knowledge-based mixer that allows users to deposit, transfer, and withdraw tokens privately — using zkSNARKs to ensure anonymity while maintaining on-chain verification. In this post, we’ll break down how it works from the ground up.
+**CipherPay** is a zero-knowledge-based mixer that allows users to deposit, transfer, and withdraw tokens privately — using zkSNARKs to ensure anonymity while maintaining on-chain verification. In this post, we'll break down how it works from the ground up.
 ---
 
 
@@ -14,7 +14,7 @@ At the core of CipherPay is a simple idea: you can prove something is true **wit
 
 #### 🧩 How it works:
 
-* **Prover**: Knows a secret (e.g., a note’s randomness and secret key).
+* **Prover**: Knows a secret (e.g., a note's secret key).
 * **ZK circuit**: A program that checks whether public and private inputs satisfy predefined constraints.
   For example, it can:
 
@@ -23,22 +23,22 @@ At the core of CipherPay is a simple idea: you can prove something is true **wit
   * Confirm that input and output amounts balance
 * **Verifier**: Checks the resulting proof using only public inputs, without learning any private data.
 
-CipherPay uses this model to allow users to **spend notes** without revealing which deposit they’re spending or how much they control.
+CipherPay uses this model to allow users to **spend notes** without revealing which deposit they're spending or how much they control.
 
 ## 🔐 Notes and Commitments
 
-Each private balance in CipherPay is represented as a **note**, which is just a commitment to an amount, recipient, and some randomness.
+Each private balance in CipherPay is represented as a **note**, which is just a commitment to an amount and a derived public key.
 
 ### 💡 How a Note is Constructed
 
 ```txt
 Note:
     amount: u256
-    note_randomness: u256
-    pubkey: H(secret_key)
+    secret_key: u256
+    pubkey: Poseidon(secret_key)
 
 Commitment: 
-    C = H(amount | note_randomness | pubkey)
+    C = Poseidon(amount, pubkey)
 ```
 
 ### 🌲 What is a Merkle Tree and Why It Matters
@@ -78,20 +78,20 @@ If your note is `C1`, you only need to provide:
 * A Merkle path: `[C0, H1]`
 * Inside the ZK circuit
 
-This proves `C1` is part of the tree — **without revealing that it’s `C1`**.
+This proves `C1` is part of the tree — **without revealing that it's `C1`**.
 
 ## 🔁 What Is a Nullifier and How It Prevents Double-Spending
 
 To ensure each note can only be spent once, CipherPay introduces a **nullifier** — a cryptographic fingerprint derived from the note's secret.
 
 ```txt
-nullifier = H(secret_key | note_randomness)
+nullifier = Poseidon(secret_key, commitment)
 ```
 
 This value is:
 
 * 💯 **Unique** to each note
-* ❌ **Unlinkable** to the original deposit (because `secret_key` and `note_randomness` are never revealed)
+* ❌ **Unlinkable** to the original deposit (because `secret_key` is never revealed)
 * ✅ **Publicly stored** on-chain *after spending*, to prevent reuse
 
 ### 🔐 How It Works in Practice
@@ -113,7 +113,7 @@ This value is:
 
 ## 🪙 Depositing into CipherPay
 
-Let’s see how deposits work.
+Let's see how deposits work.
 
 ### 🖼️ Deposit Flow
 
@@ -143,7 +143,7 @@ Withdrawals require proving you own a note inside the Merkle tree — **without 
 
 ---
 
-## 🔭 What’s Next?
+## 🔭 What's Next?
 
 CipherPay starts with **Product 0: basic deposit + withdrawal**, but will grow to support:
 

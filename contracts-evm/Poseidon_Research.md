@@ -81,11 +81,11 @@ Our withdrawal circuit uses Poseidon in these contexts:
 // 1. Public key derivation (1 input)
 signal note_pubkey <== Poseidon(1)([note_secret_key]);
 
-// 2. Note commitment (3 inputs) 
-commitment <== NoteCommitment()(note_amount, note_randomness, note_pubkey);
+// 2. Note commitment (2 inputs) 
+commitment <== NoteCommitment()(note_amount, note_pubkey);
 
 // 3. Nullifier (2 inputs)
-nullifier <== Nullifier()(note_secret_key, note_randomness);
+nullifier <== Nullifier()(note_secret_key, commitment);
 
 // 4. Merkle tree hashing (2 inputs)
 cur[i+1] <== Poseidon(2)([left[i], right[i]]);
@@ -93,12 +93,11 @@ cur[i+1] <== Poseidon(2)([left[i], right[i]]);
 
 **Required Variants:**
 - **PoseidonT2** (1 input): Public key derivation
-- **PoseidonT3** (2 inputs): Nullifiers, Merkle tree ⭐ **Most used**
-- **PoseidonT4** (3 inputs): Note commitments
+- **PoseidonT3** (2 inputs): Note commitments, nullifiers, Merkle tree ⭐ **Most used**
 
 ### Implementation Plan
 
-1. **Use circomlibjs generator** for PoseidonT2, T3, T4
+1. **Use circomlibjs generator** for PoseidonT2, T3
 2. **Generate contracts** during circuit build process
 3. **Integrate with existing** `generate_verifier.ts` script
 4. **Create wrapper library** for type-safe usage
@@ -106,7 +105,7 @@ cur[i+1] <== Poseidon(2)([left[i], right[i]]);
 ### Gas Cost Impact
 
 For typical mixer operations:
-- **Deposit**: 1x T4 hash (~48k gas)
+- **Deposit**: 1x T3 hash (~32k gas)
 - **Withdraw**: 1x T2 + 1x T3 + 30x T3 (Merkle path) ≈ ~1M gas for hashing
 - **Total additional cost**: ~50k gas vs keccak256
 

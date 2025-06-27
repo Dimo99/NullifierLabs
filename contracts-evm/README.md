@@ -63,10 +63,14 @@ forge script script/Deploy.s.sol --rpc-url <RPC_URL> --broadcast
 
 ```solidity
 // Create a commitment for your note
-bytes32 commitment = keccak256(abi.encodePacked(amount, randomness, secretKey));
+// pubkey = Poseidon(secretKey)
+// commitment = Poseidon(amount, pubkey)
+uint256 pubkey = poseidon.poseidon([secretKey]);
+uint256[2] memory inputs = [amount, pubkey];
+uint256 commitment = poseidon.poseidon(inputs);
 
 // Deposit funds
-mixer.deposit{value: amount}(commitment);
+mixer.deposit{value: amount}(pubkey);
 ```
 
 ### Withdrawal

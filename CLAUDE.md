@@ -57,11 +57,11 @@ forge test --match-test testWithdraw
 
 ## Key Architecture Details
 
-**UTXO Model**: Uses unspent transaction output model with private notes containing (amount, randomness, public_key)
+**UTXO Model**: Uses unspent transaction output model with private notes containing (amount, secret_key, derived_public_key)
 
 **Merkle Tree**: Maintains on-chain Merkle tree of note commitments with 30-level depth, supports up to 2^30 notes
 
-**Nullifiers**: Prevents double-spending using nullifiers derived from note secret key and randomness
+**Nullifiers**: Prevents double-spending using nullifiers derived from note secret key and commitment
 
 **Relay System**: Supports transaction relaying to preserve sender anonymity with configurable relay fees
 

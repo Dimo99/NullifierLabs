@@ -17,14 +17,14 @@
 
 ### Tasks
 
-* [ ] Define `Note` structure: `(amount, randomness, pubkey)`
+* [ ] Define `Note` structure: `(amount, secret_key, derived_pubkey)`
 * [ ] Circuit: `withdraw.circom`
 
   * Inputs:
 
     * Merkle root
     * Merkle path
-    * Note secret (randomness + privkey)
+    * Note secret (secret_key)
     * Withdrawal amount
     * Recipient public address
   * Outputs:
@@ -75,7 +75,7 @@
 
 ### Deposit Flow
 
-* [ ] User generates note (randomness + secret key)
+* [ ] User generates note (secret key)
 * [ ] Commitment computed in-browser
 * [ ] Submit tx with commitment + amount
 * [ ] Note saved locally

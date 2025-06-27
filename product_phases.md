@@ -6,7 +6,7 @@
 ### **Deposit**
 
 * User visits the website and clicks **“Deposit”**.
-* A secret note is generated: `(note_randomness, secret_key)`.
+* A secret note is generated: `(secret_key)`.
 * The user is prompted to **download the note** and store it securely.
 * Then, the deposit transaction is submitted to the protocol.
 

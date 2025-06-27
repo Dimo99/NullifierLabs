@@ -18,7 +18,7 @@ The system uses UTXO-style shielded notes and a Merkle tree of commitments to re
 
 ## Terminology
 
-* **Note**: A private UTXO containing amount, randomness, and public key.
+* **Note**: A private UTXO containing amount, secret key, and derived public key.
 * **Commitment**: A cryptographic commitment to a note, stored in a Merkle tree.
 * **Nullifier**: A unique identifier derived from a note, revealed when the note is spent.
 * **Stealth Address**: A public key generated from a user's secret key for receiving shielded notes.
@@ -59,21 +59,22 @@ The system uses UTXO-style shielded notes and a Merkle tree of commitments to re
 
 ### Deposit
 
-1. User generates a note: `(amount, note_randomness, recipient_pubkey)`
-2. Computes commitment: `C = H(amount || note_randomness || recipient_pubkey)`
-3. Sends on-chain tx with `C` and funds (SOL/SPL)
-4. Contract appends `C` to Merkle tree
+1. User generates a note: `(amount, secret_key)`
+2. Derives public key: `pubkey = Poseidon(secret_key)`
+3. Computes commitment: `C = Poseidon(amount, pubkey)`
+4. Sends on-chain tx with `C` and funds (SOL/SPL)
+5. Contract appends `C` to Merkle tree
 
 ### Withdrawal (Spend + Optional Change)
 
 1. User selects a note
 2. Generates zk proof with:
    * Merkle inclusion proof for the note's commitment
-   * Knowledge of `note_randomnes`
-   * Knowledge of `recipient_pubkey` corresponding `secret_key`
-   * Derivation of `nullifier = H(secret_key || note_randomnes)`
+   * Knowledge of `secret_key`
+   * Knowledge of `pubkey = Poseidon(secret_key)`
+   * Derivation of `nullifier = Poseidon(secret_key, commitment)`
    * Valid recipient address for withdrawal
-   * Change notes commitments
+   * Change note commitment
    * Encrypted note data (ciphertexts) for outputs
 3. Sends on-chain tx with:
    * `nullifier[]`
@@ -92,10 +93,10 @@ The system uses UTXO-style shielded notes and a Merkle tree of commitments to re
 ### Shielded Transfer (Internal Transfer)
 
 1. Sender generates two output notes:
-   * One for the recipient: `(r', amount, recipient_pubkey)` → `commitment = H(amount || r' || recipient_pubkey)`
+   * One for the recipient: `(amount, recipient_secret_key)` → `pubkey = Poseidon(recipient_secret_key)` → `commitment = Poseidon(amount, pubkey)`
    * One for change back to self
 2. For each output note, encrypts the metadata:
-   * `ciphertext = Encrypt(recipient_viewing_key, r', amount [, optional memo])`
+   * `ciphertext = Encrypt(recipient_viewing_key, secret_key, amount [, optional memo])`
 3. Generates zk proof that:
    * Input note(s) are valid and unspent
    * Nullifier(s) are correctly derived and unique
