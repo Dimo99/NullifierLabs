@@ -234,14 +234,14 @@ export class EventIndexer {
       clearInterval(this.syncInterval);
     }
 
-    // Set up periodic sync every 30 seconds to catch missed events
+    // Set up periodic sync every 5 seconds to catch missed events
     this.syncInterval = setInterval(async () => {
       try {
         await this.syncMissedEvents();
       } catch (error) {
         logger.error("Error during periodic sync:", error);
       }
-    }, 30000); // 30 seconds
+    }, 5000); // 5 seconds
 
     logger.info("Periodic sync set up to run every 30 seconds");
   }
