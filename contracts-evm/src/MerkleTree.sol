@@ -24,12 +24,12 @@ contract MerkleTree {
     // Cached zero hashes for each level to avoid recomputation
     uint256[MERKLE_DEPTH] public zeroHashes;
     
-    // Filled subtrees - stores the rightmost hash at each level
+    // Filled subtrees - stores the rightmost left hash at each level
     uint256[MERKLE_DEPTH] public filledSubtrees;
     
     error MerkleTreeFull();
     
-    event LeafInserted(uint256 indexed leafIndex, uint256 leaf, uint256 newRoot);
+    event LeafInserted(uint256 leafIndex, uint256 leaf, uint256 newRoot);
     
     constructor(address _poseidon) {
         require(_poseidon != address(0), "Invalid Poseidon address");
@@ -78,10 +78,9 @@ contract MerkleTree {
                 current = poseidon.poseidon(inputs);
             } else {
                 // Current position is right child
-                // Hash with the stored left sibling and update the filled subtree
+                // Hash with the stored left sibling
                 uint256[2] memory inputs = [filledSubtrees[i], current];
                 current = poseidon.poseidon(inputs);
-                filledSubtrees[i] = current;
             }
             index >>= 1;
         }
@@ -90,6 +89,8 @@ contract MerkleTree {
         currentRootIndex = (currentRootIndex + 1) % ROOTS_CAPACITY;
         
         currentLeafIndex++;
+
+        emit LeafInserted(currentLeafIndex - 1, leaf, current);
         
         return current;
     }

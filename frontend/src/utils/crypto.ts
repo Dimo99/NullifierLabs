@@ -110,10 +110,8 @@ export class MouseEntropyCollector {
 export async function generatePublicKey(secretKey: string): Promise<string> {
   const poseidon = await buildPoseidon();
   const secretBigInt = BigInt('0x' + secretKey);
-  
-  // Use Poseidon hash to derive public key (in a real implementation, 
-  // you'd use proper elliptic curve operations)
-  const publicKey = poseidon([secretBigInt, BigInt(1)]);
+
+  const publicKey = poseidon([secretBigInt]);
   
   return BigInt(poseidon.F.toString(publicKey)).toString(16).padStart(64, '0');
 }
@@ -143,5 +141,5 @@ export async function calculateCommitment(amount: bigint, publicKey: string): Pr
   const poseidon = await buildPoseidon();
   const publicKeyBigInt = BigInt('0x' + publicKey);
   const commitment = poseidon([amount, publicKeyBigInt]);
-  return BigInt(poseidon.F.toString(commitment)).toString(16).padStart(64, '0');
+  return BigInt(poseidon.F.toString(commitment)).toString();
 }

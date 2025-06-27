@@ -5,6 +5,7 @@ import { ethers } from 'ethers';
 import { useWallet } from '../hooks/useWallet';
 import { generatePublicKey, encodeSecret, calculateCommitment } from '../utils/crypto';
 import { getPrivateMixerContract } from '../utils/contract';
+import { constrainedMemory } from 'process';
 
 interface DepositPageProps {
   secretKey: string;
@@ -35,9 +36,12 @@ export function DepositPage({ secretKey, onBack, onComplete }: DepositPageProps)
       // Generate public key and commitment
       const pubKey = await generatePublicKey(secretKey);
       setPublicKey(pubKey);
+
+      console.log("Generated public key:", pubKey);
       
       const amountWei = ethers.parseEther(amount);
       const comm = await calculateCommitment(amountWei, pubKey);
+      console.log("Calculated commitment:", comm);
       setCommitment(comm);
     } catch (err: any) {
       setError('Failed to generate keys: ' + err.message);
@@ -73,6 +77,8 @@ export function DepositPage({ secretKey, onBack, onComplete }: DepositPageProps)
       
       if (receipt?.status === 1) {
         // Encode secret with amount for user to save
+        console.log("Deposit secret", secretKey);
+        console.log("Deposit amount (wei)", amountWei);
         const encodedSecret = encodeSecret(secretKey, amountWei);
         onComplete(encodedSecret, tx.hash);
       } else {

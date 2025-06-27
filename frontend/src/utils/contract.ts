@@ -7,7 +7,7 @@ export const PRIVATE_MIXER_ABI = contractABI.abi;
 // Contract addresses by chain ID
 export const CONTRACT_ADDRESSES = {
   // Local development (Anvil)
-  31337: "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
+  31337: "0xc5a5C42992dECbae36851359345FE25997F5C42d",
   // Add other networks as needed
 } as const;
 

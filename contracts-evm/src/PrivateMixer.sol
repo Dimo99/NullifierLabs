@@ -14,12 +14,12 @@ contract PrivateMixer is ReentrancyGuard, Pausable, Ownable, MerkleTree {
     
     mapping(uint256 => bool) public nullifierUsed;
     
-    event Deposit(uint256 indexed commitment, uint256 amount, address indexed depositor);
+    event Deposit(uint256 commitment, uint256 amount, address depositor);
     event Withdrawal(
-        uint256 indexed nullifier,
-        uint256 indexed newCommitment,
+        uint256 nullifier,
+        uint256 newCommitment,
         uint256 amount,
-        address indexed recipient,
+        address recipient,
         uint256 relayFee
     );
     

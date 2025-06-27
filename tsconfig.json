@@ -11,6 +11,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["circuits/test/**/*.ts", "contracts-evm/scripts/**/*.ts"],
+  "include": ["circuits/test/**/*.ts", "contracts-evm/scripts/**/*.ts", "backend/src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 } 

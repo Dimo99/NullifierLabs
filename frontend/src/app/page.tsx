@@ -5,11 +5,12 @@ import { useWallet } from '../hooks/useWallet';
 import { SecretGenerator } from '../components/SecretGenerator';
 import { DepositPage } from '../components/DepositPage';
 import { DepositSuccess } from '../components/DepositSuccess';
+import { WithdrawalPage } from '../components/WithdrawalPage';
 
 export default function Home() {
   const { account, isConnected, isConnecting, error, connectWallet, disconnectWallet } = useWallet();
   const [showSecretGenerator, setShowSecretGenerator] = useState(false);
-  const [currentView, setCurrentView] = useState<'home' | 'deposit' | 'success'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'deposit' | 'success' | 'withdraw'>('home');
   const [generatedSecret, setGeneratedSecret] = useState<string | null>(null);
   const [completedDeposit, setCompletedDeposit] = useState<{encodedSecret: string, txHash: string} | null>(null);
 
@@ -46,6 +47,10 @@ export default function Home() {
     setTimeout(() => setShowSecretGenerator(true), 100);
   };
 
+  const handleStartWithdraw = () => {
+    setCurrentView('withdraw');
+  };
+
   // Show deposit page
   if (currentView === 'deposit' && generatedSecret) {
     return (
@@ -65,6 +70,34 @@ export default function Home() {
         txHash={completedDeposit.txHash}
         onNewDeposit={handleNewDeposit}
       />
+    );
+  }
+
+  // Show withdrawal page
+  if (currentView === 'withdraw') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+        <header className="border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm">
+          <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+            <button
+              onClick={handleBackToHome}
+              className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Home
+            </button>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+              CipherPay
+            </h1>
+            <div className="w-20"></div>
+          </div>
+        </header>
+        <main className="container mx-auto px-6 py-8">
+          <WithdrawalPage />
+        </main>
+      </div>
     );
   }
 
@@ -160,6 +193,7 @@ export default function Home() {
                 Use your secret key to withdraw funds privately to any address. No one can link your deposit to withdrawal.
               </p>
               <button 
+                onClick={handleStartWithdraw}
                 disabled={!isConnected}
                 className="w-full py-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors font-medium"
               >
