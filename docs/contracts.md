@@ -1,6 +1,8 @@
 # 📜 Smart Contract Documentation
 
-This document provides detailed information about the Solidity smart contracts that power CipherPay.
+This document provides detailed API reference and architectural information about the Solidity smart contracts that power CipherPay.
+
+> 🚀 **For quick setup, deployment, and basic usage, see [`contracts-evm/README.md`](../contracts-evm/README.md)**
 
 ## Overview
 
@@ -145,41 +147,11 @@ Maintains history of recent Merkle roots to allow proofs based on slightly outda
 
 ## Deployment
 
-### Prerequisites
-```bash
-# Install Foundry
-curl -L https://foundry.paradigm.xyz | bash
-foundryup
-
-# Install dependencies
-forge install
-```
-
-### Deployment Commands
-```bash
-# Local deployment (Anvil)
-forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --private-key $PRIVATE_KEY --broadcast
-
-# Testnet deployment
-forge script script/Deploy.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast --verify
-```
+> ⚙️ **For step-by-step deployment instructions, see [`contracts-evm/README.md`](../contracts-evm/README.md)**
 
 ## Testing
 
-### Running Tests
-```bash
-# Run all tests
-forge test
-
-# Run specific test file
-forge test --match-contract PrivateMixerTest
-
-# Run with verbosity
-forge test -vvv
-
-# Run with gas reporting
-forge test --gas-report
-```
+> 🧪 **For detailed testing commands and options, see [`contracts-evm/README.md`](../contracts-evm/README.md)**
 
 ## Security Considerations
 
