@@ -110,7 +110,10 @@ forge test -vvv
 
 ## Important Notes
 
-
+⚠️ **This is experimental software for development only**
+- Do not use with real funds
+- Requires trusted setup ceremony for production
+- Needs professional security audit
 
 ## Documentation
 

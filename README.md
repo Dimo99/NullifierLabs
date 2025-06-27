@@ -51,6 +51,8 @@ CipherPay is a **privacy mixer** that breaks the link between deposits and withd
 # Clone and install
 git clone <repository-url>
 cd private_mixer
+
+# Install root dependencies
 npm install
 
 # Install dependencies for each component
@@ -61,20 +63,32 @@ cd contracts-evm && forge install && cd ..
 
 ### Run Locally
 ```bash
-# 1. Start local blockchain
-cd contracts-evm && anvil
+# 1. Start local blockchain (Terminal 1)
+cd contracts-evm
+anvil
 
-# 2. Deploy contracts (new terminal)
-forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --private-key <ANVIL_PRIVATE_KEY> --broadcast
+# 2. Deploy contracts (Terminal 2)
+cd contracts-evm
+export PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80  # Default Anvil key
+forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --private-key $PRIVATE_KEY --broadcast
 
-# 3. Start backend (new terminal)
-cd backend && npm run dev
+# 3. Start backend (Terminal 3)
+cd backend
+npm run dev
 
-# 4. Start frontend (new terminal)
-cd frontend && npm run dev
+# 4. Start frontend (Terminal 4)
+cd frontend
+npm run dev
 
-# 5. Open http://localhost:3000
+# 5. Open http://localhost:3000 in your browser
 ```
+
+### First Deposit & Withdrawal
+1. **Connect Wallet**: Use MetaMask with Anvil's local network (Chain ID: 31337)
+2. **Add Test ETH**: Anvil provides test accounts with ETH
+3. **Make Deposit**: Generate a secret key and deposit ETH
+4. **Save Note**: Save your secret note file securely
+5. **Withdraw**: Upload your note and withdraw to any address
 
 ## 🧪 Testing
 
