@@ -174,6 +174,7 @@ export function WithdrawalPage() {
     setShowSecretGenerator(false);
     
     // Now generate proof with the change secret
+    console.log("Generating proof called once");
     await generateProof(secretKey);
   };
 

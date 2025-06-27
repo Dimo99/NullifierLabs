@@ -158,26 +158,12 @@ export class EventIndexer {
     // Fix: Correct signature for real-time events
     this.contract.on(
       this.contract.filters.LeafInserted(),
-      async (leafIndex, leaf, newRoot, event) => {
+      async (event: ethers.ContractEventPayload) => {
         try {
-          logger.info(`Real-time event received: leafIndex=${leafIndex}, leaf=${leaf}, newRoot=${newRoot}`);
-
-          // Create event ID for deduplication
-          const eventId = `${event.transactionHash}-${event.index}`;
-
-          if (this.processedEvents.has(eventId)) {
-            logger.info(`Event ${eventId} already processed, skipping`);
-            return;
-          }
-
-          // Process the event
-          await this.processRealTimeEvent(leafIndex, leaf, newRoot, event, merkleTreeService);
-
-          // Mark as processed
-          this.processedEvents.add(eventId);
+          this.processEvent(event.log, merkleTreeService);
 
           // Update last processed block
-          this.lastProcessedBlock = Math.max(this.lastProcessedBlock, event.blockNumber);
+          this.lastProcessedBlock = Math.max(this.lastProcessedBlock, event.log.blockNumber);
 
         } catch (error) {
           logger.error(
@@ -204,23 +190,6 @@ export class EventIndexer {
     }
   }
 
-  private async processRealTimeEvent(
-    leafIndex: bigint,
-    leaf: bigint,
-    newRoot: bigint,
-    event: ethers.EventLog,
-    merkleTreeService: MerkleTreeService
-  ): Promise<void> {
-    logger.info(
-      `Processing real-time leaf insertion: leafIndex=${leafIndex}, leaf=${leaf}, newRoot=${newRoot}, block=${event.blockNumber}`
-    );
-
-    // Add to Merkle tree (leaf is the commitment)
-    merkleTreeService.addLeaf(leaf.toString());
-
-    console.log("Current root", merkleTreeService.getRoot());
-  }
-
   private processEvent(event: ethers.EventLog | ethers.Log, merkleTreeService: MerkleTreeService) {
     let leafIndex: bigint, leaf: bigint, newRoot: bigint;
 
@@ -239,6 +208,7 @@ export class EventIndexer {
 
     // Create event ID for deduplication
     const eventId = `${event.transactionHash}-${event.index}`;
+    console.log("Event id", eventId);
 
     if (this.processedEvents.has(eventId)) {
       logger.info(`Event ${eventId} already processed, skipping`);
@@ -280,6 +250,8 @@ export class EventIndexer {
     try {
       const currentBlock = await this.provider.getBlockNumber();
       const fromBlock = Math.max(this.lastProcessedBlock + 1, this.config.startBlock);
+      console.log("Last processed block", this.lastProcessedBlock);
+      console.log("Start block", this.config.startBlock);
       const toBlock = currentBlock - this.config.confirmations;
 
       if (fromBlock > toBlock) {

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { MouseEntropyCollector } from '../utils/crypto';
+import { useEffect } from 'react';
+import { useEntropyCollection } from '../hooks/useEntropyCollection';
 
 interface SecretGeneratorProps {
   onSecretGenerated: (secretKey: string) => void;
@@ -9,39 +9,22 @@ interface SecretGeneratorProps {
 }
 
 export function SecretGenerator({ onSecretGenerated, onCancel }: SecretGeneratorProps) {
-  const [progress, setProgress] = useState(0);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [collector, setCollector] = useState<MouseEntropyCollector | null>(null);
+  // Use the custom hook for entropy collection
+  const { progress, isCollecting, startCollection, stopCollection } = useEntropyCollection(onSecretGenerated);
 
+  // Start collection when component mounts
   useEffect(() => {
-    // Start collection immediately when component mounts
-    startGeneration();
-    
-    return () => {
-      // Cleanup on unmount
-      collector?.stopCollection();
-    };
-  }, []);
+    console.log("SecretGenerator mounted - starting entropy collection");
+    startCollection();
 
-  const startGeneration = () => {
-    setIsGenerating(true);
-    setProgress(0);
-    
-    const entropyCollector = new MouseEntropyCollector(
-      (progress) => setProgress(progress),
-      (secretKey) => {
-        setIsGenerating(false);
-        onSecretGenerated(secretKey);
-      }
-    );
-    
-    setCollector(entropyCollector);
-    entropyCollector.startCollection();
-  };
+    return () => {
+      console.log("SecretGenerator unmounting - stopping collection");
+      stopCollection();
+    };
+  }, [startCollection, stopCollection]);
 
   const handleCancel = () => {
-    collector?.stopCollection();
-    setIsGenerating(false);
+    stopCollection();
     onCancel();
   };
 
@@ -87,7 +70,7 @@ export function SecretGenerator({ onSecretGenerated, onCancel }: SecretGenerator
           </div>
           
           {/* Mouse movement indicator */}
-          {isGenerating && progress < 1 && (
+          {isCollecting && progress < 1 && (
             <div className="flex items-center justify-center gap-2 text-blue-400 mb-4">
               <div className="animate-pulse">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -19,6 +19,7 @@ export default function Home() {
   };
 
   const handleSecretGenerated = (secretKey: string) => {
+    console.log("Secret generated", secretKey);
     setGeneratedSecret(secretKey);
     setShowSecretGenerator(false);
     setCurrentView('deposit');
