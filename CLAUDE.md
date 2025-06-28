@@ -1,85 +1,90 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Codebase guidance for Claude Code (claude.ai/code) when working with the Cipherpay private mixer protocol.
 
-## Project Architecture
+## Project Overview
 
-This is a zero-knowledge private mixer protocol called "Cipherpay" that enables private transactions on blockchain networks. The project consists of three main components:
+Zero-knowledge private mixer protocol enabling anonymous blockchain transactions using zk-SNARKs. Components:
+- **circuits/** - Circom zk-SNARK circuits (withdraw, note_commitment, nullifier, merkle_proof)
+- **contracts-evm/** - Solidity contracts with Groth16 verifier (Foundry)
+- **frontend/** - Next.js 15 app with MetaMask integration
+- **backend/** - Express API for Merkle tree state and event indexing
+- **shared/** - Published as `@private-mixer/shared` npm package
 
-### Core Components
+## Critical Setup Requirements
 
-**1. Zero-Knowledge Circuits (`circuits/`)**
-- Written in Circom language for zk-SNARK proof generation
-- Key circuits: `withdraw.circom`, `note_commitment.circom`, `nullifier.circom`, `merkle_proof.circom`
-- Uses Poseidon hashing and Merkle tree proofs
-- Proves withdrawal validity without revealing note details
-
-**2. EVM Smart Contracts (`contracts-evm/`)**
-- Solidity contracts for Ethereum-compatible chains
-- Main contract: `PrivateMixer.sol` - handles deposits, withdrawals, and Merkle tree management
-- Uses Groth16 verifier for zk-SNARK proof verification
-- Built with Foundry framework
-
-**3. Solana Contracts (`contracts-solana/`)**
-- Planned Solana implementation (directory exists but may be empty)
-
-## Development Commands
-
-### Circuit Testing
+### Build Order (Important!)
 ```bash
-# Run integration tests (recommended)
-npm test
+# 1. Install all dependencies
+npm install
 
-# Run specific circuit tests individually (if needed for debugging)
+# 2. Build shared library first (required by frontend/backend)
+cd shared && npm run build && cd ..
+
+# 3. Then build other components as needed
+```
+
+### Circuit Compilation Process
+
+**Custom test framework using direct circom commands:**
+- Uses `CircuitTestRunner` in `circuits/scripts/circuit-test-runner.ts`
+- Compilation: `circom circuit.circom --r1cs --wasm --sym --O2 -o outputs/`
+- Trusted setup: `snarkjs groth16 setup` with Powers of Tau file
+- Each test: witness generation → proof generation → verification
+- No circom_tester - uses raw circom CLI execution
+
+**Test outputs in `circuits/scripts/outputs/` with subdirectories for each circuit**
+
+### Non-Obvious Configurations
+
+**Backend uses parent tsconfig.json:**
+- All backend npm scripts reference `../tsconfig.json`
+- Start script runs from parent directory: `cd .. && node dist/backend/src/index.js`
+
+**Foundry optimizations enabled:**
+- `via_ir = true` - Uses Solidity IR pipeline
+- `ffi = true` - External program calls in tests
+- Gas limit: `9223372036854775807` (max int64)
+
+**Incomplete workspace setup:**
+- Only `shared` is in npm workspaces array
+- Frontend/backend use local file references: `"@private-mixer/shared": "file:../shared"`
+
+## Key Technical Details
+
+- **UTXO Model**: Notes contain (amount, secret_key, derived_public_key)
+- **Merkle Tree**: 30 levels, up to 2^30 notes
+- **Hash Functions**: Poseidon (circuits) / Keccak256 (contracts - temporary)
+- **Nullifiers**: Prevent double-spending via secret_key + commitment
+- **Frontend**: Tailwind v4 alpha, React 19, in-browser proof generation
+
+## Project-Specific Commands
+
+```bash
+# Circuit integration tests (from root)
+npm test
+npm run test:integration
+
+# Individual circuit tests (debugging)
 npm run test:nullifier
 npm run test:note-commitment
 npm run test:merkle-proof
 npm run test:withdraw
-```
-
-### EVM Contract Development
-```bash
-# Navigate to contracts directory
-cd contracts-evm
-
-# Build contracts
-forge build
-
-# Run tests
-forge test
 
 # Deploy contracts
-forge script script/Deploy.s.sol
-
-# Run specific test
-forge test --match-test testWithdraw
+cd contracts-evm && forge script script/Deploy.s.sol
 ```
 
-## Key Architecture Details
+## Environment Variables
 
-**UTXO Model**: Uses unspent transaction output model with private notes containing (amount, secret_key, derived_public_key)
+**Backend (.env):**
+```
+CONTRACT_ADDRESS=<address>
+CONFIRMATIONS=<number>
+```
 
-**Merkle Tree**: Maintains on-chain Merkle tree of note commitments with 30-level depth, supports up to 2^30 notes
-
-**Nullifiers**: Prevents double-spending using nullifiers derived from note secret key and commitment
-
-**Relay System**: Supports transaction relaying to preserve sender anonymity with configurable relay fees
-
-**Change Notes**: Supports partial withdrawals by creating change notes for remaining balance
-
-## Circuit Parameters
-- Merkle depth: 30 levels
-- Field size: 252 bits for comparisons
-- Hash function: Poseidon (circuits) / Keccak256 (temporary in contracts)
-
-## Smart Contract Key Features
-- Deposit function: Adds note commitments to Merkle tree
-- Withdraw function: Verifies zk-SNARK proofs and processes withdrawals
-- Merkle root history: Maintains 10 recent roots for proof flexibility
-- Pausable and upgradeable with owner controls
-
-## File Structure Notes
-- Circuit compilation outputs in `circuits/outputs/`
-- Trusted setup files: `powersOfTau28_hez_final_14.ptau`
-- Generated verifiers in `circuits/outputs/*/verifier.sol`
-- Integration tests in `circuits/test/integration_test.ts`
+**Frontend (.env.local):**
+```
+NEXT_PUBLIC_CONTRACT_ADDRESS=<address>
+NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
+```
