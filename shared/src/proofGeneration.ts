@@ -20,11 +20,28 @@ export async function generatePubkey(secretKey: bigint): Promise<string> {
 }
 
 /**
+ * Generate public key from hex secret key - frontend-compatible wrapper
+ */
+export async function generatePubkeyFromHex(secretKey: string): Promise<string> {
+  const secretBigInt = BigInt('0x' + secretKey);
+  const pubkeyDecimal = await generatePubkey(secretBigInt);
+  return BigInt(pubkeyDecimal).toString(16).padStart(64, '0');
+}
+
+/**
  * Generate commitment from amount and public key using Poseidon hash
  */
 export async function generateCommitment(amount: bigint, pubkey: string): Promise<string> {
   const poseidon = await buildPoseidon();
   return poseidon.F.toString(poseidon([amount, pubkey]));
+}
+
+/**
+ * Generate commitment from amount and hex public key - frontend-compatible wrapper
+ */
+export async function generateCommitmentFromHex(amount: bigint, publicKey: string): Promise<string> {
+  const publicKeyDecimal = BigInt('0x' + publicKey).toString();
+  return await generateCommitment(amount, publicKeyDecimal);
 }
 
 /**

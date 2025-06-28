@@ -10,7 +10,9 @@ export {
 } from './types';
 export {
   generatePubkey,
+  generatePubkeyFromHex,
   generateCommitment,
+  generateCommitmentFromHex,
   generateNullifier,
   generateChangeCommitment,
   generateCryptographicComponents,

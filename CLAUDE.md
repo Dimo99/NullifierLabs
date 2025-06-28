@@ -88,3 +88,60 @@ CONFIRMATIONS=<number>
 NEXT_PUBLIC_CONTRACT_ADDRESS=<address>
 NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
 ```
+
+## Task Management Workflow
+
+When starting any non-trivial development task, follow this structured approach:
+
+### 1. Create Implementation Plan
+For any task requiring multiple steps or significant changes:
+- Create a detailed plan in `tasks/<task-name>.md`
+- Include objectives, analysis, implementation phases, and success criteria
+- Use the following template structure:
+
+```markdown
+# Task Title
+
+**Status:** In Progress  
+**Date:** YYYY-MM-DD  
+
+## Objectives
+- Primary goals
+- Secondary goals
+
+## Analysis/Research Results
+- Key findings
+- Areas to change/modify
+
+## Implementation Plan
+### Phase 1: [Description]
+- [ ] Task 1
+- [ ] Task 2
+
+### Phase 2: [Description]  
+- [ ] Task 3
+- [ ] Task 4
+
+## Success Criteria
+- Functional requirements
+- Quality requirements
+
+## Final Status
+[Update when complete]
+```
+
+### 2. Execute Based on Plan
+- Work through phases systematically
+- Update plan file with progress (mark completed items)
+- Document any changes or discoveries during implementation
+
+### 3. Completion
+- Rename file to `<task-name>.completed.md` when finished
+- Update status to "✅ Completed"
+- Document final results and outcomes
+
+### Examples
+- `tasks/code-refactoring-plan.completed.md` - Crypto function consolidation
+- Use this pattern for features, refactoring, bug fixes, etc.
+
+This approach ensures systematic execution and maintains project documentation.

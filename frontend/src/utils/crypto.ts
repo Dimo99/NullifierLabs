@@ -1,5 +1,4 @@
-//@ts-expect-error circomlibjs doesn't have TypeScript definitions
-import { buildPoseidon } from 'circomlibjs';
+import { generatePubkeyFromHex, generateCommitmentFromHex } from '@private-mixer/shared';
 
 // Mouse entropy collector
 export class MouseEntropyCollector {
@@ -108,12 +107,7 @@ export class MouseEntropyCollector {
 
 // Generate public key from secret key
 export async function generatePublicKey(secretKey: string): Promise<string> {
-  const poseidon = await buildPoseidon();
-  const secretBigInt = BigInt('0x' + secretKey);
-
-  const publicKey = poseidon([secretBigInt]);
-  
-  return BigInt(poseidon.F.toString(publicKey)).toString(16).padStart(64, '0');
+  return await generatePubkeyFromHex(secretKey);
 }
 
 // Encode secret key + amount into a single hex string
@@ -138,8 +132,5 @@ export function decodeSecret(encodedSecret: string): { secretKey: string; amount
 
 // Calculate commitment from amount and public key
 export async function calculateCommitment(amount: bigint, publicKey: string): Promise<string> {
-  const poseidon = await buildPoseidon();
-  const publicKeyBigInt = BigInt('0x' + publicKey);
-  const commitment = poseidon([amount, publicKeyBigInt]);
-  return BigInt(poseidon.F.toString(commitment)).toString();
+  return await generateCommitmentFromHex(amount, publicKey);
 }
