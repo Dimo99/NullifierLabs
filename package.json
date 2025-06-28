@@ -2,6 +2,7 @@
   "name": "private_mixer",
   "version": "1.0.0",
   "main": "index.js",
+  "workspaces": ["shared"],
   "scripts": {
     "build": "tsc",
     "test": "npm run test:integration",

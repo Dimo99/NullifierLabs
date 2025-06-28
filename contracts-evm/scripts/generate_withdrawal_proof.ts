@@ -5,9 +5,7 @@ import * as snarkjs from "snarkjs";
 import * as path from "path";
 import * as fs from "fs";
 import { AbiCoder, encodeRlp } from "ethers";
-
-// Constants
-const MERKLE_DEPTH = 30;
+import { MerkleTree, DEFAULT_MERKLE_DEPTH } from "@private-mixer/shared";
 
 // Find project root dynamically
 function findProjectRoot(): string {
@@ -32,88 +30,6 @@ const ZKEY_PATH = path.resolve(
   PROJECT_ROOT,
   "contracts-evm/test/artifacts/withdraw_final.zkey"
 );
-
-interface MerkleProof {
-  proof: bigint[];
-  indices: number[];
-  root: bigint;
-}
-
-const zeroes: { [level: number]: bigint } = { 0: 0n };
-
-function zeroAtLevel(level: number, poseidon: any): bigint {
-  if (level in zeroes) {
-    return zeroes[level];
-  }
-
-  const prevLevelZero = zeroAtLevel(level - 1, poseidon);
-  zeroes[level] = BigInt(
-    poseidon.F.toString(poseidon([prevLevelZero, prevLevelZero]))
-  );
-
-  return zeroes[level];
-}
-
-async function buildMerkleTree(
-  commitments: bigint[],
-  poseidon: any
-): Promise<bigint[][]> {
-  const tree: bigint[][] = [];
-
-  // Initialize first level with commitments, pad with zeros
-  const firstLevel: bigint[] = [...commitments];
-
-  tree.push(firstLevel);
-
-  // Build tree level by level
-  for (let level = 0; level < MERKLE_DEPTH; level++) {
-    const currentLevel = tree[level];
-    const nextLevel: bigint[] = [];
-
-    for (let i = 0; i < currentLevel.length; i += 2) {
-      const left = currentLevel[i];
-      const right =
-        currentLevel.length > i + 1
-          ? currentLevel[i + 1]
-          : zeroAtLevel(level, poseidon);
-      const parent = BigInt(poseidon.F.toString(poseidon([left, right])));
-      nextLevel.push(parent);
-    }
-
-    tree.push(nextLevel);
-  }
-
-  return tree;
-}
-
-async function generateMerkleProof(
-  tree: bigint[][],
-  leafIndex: number
-): Promise<MerkleProof> {
-  const proof: bigint[] = [];
-  const indices: number[] = [];
-
-  let currentIndex = leafIndex;
-
-  // Generate proof by collecting siblings at each level
-  for (let level = 0; level < MERKLE_DEPTH; level++) {
-    const isRightChild = currentIndex % 2 === 1;
-    const siblingIndex = isRightChild ? currentIndex - 1 : currentIndex + 1;
-
-    proof.push(
-      tree[level][siblingIndex] === undefined
-        ? zeroes[level]
-        : tree[level][siblingIndex]
-    );
-    indices.push(isRightChild ? 1 : 0);
-
-    currentIndex = Math.floor(currentIndex / 2);
-  }
-
-  const root = tree[MERKLE_DEPTH][0];
-
-  return { proof, indices, root };
-}
 
 async function generateWithdrawalProof(
   noteAmount: bigint,
@@ -155,14 +71,12 @@ async function generateWithdrawalProof(
       poseidon([changeAmount, newPubkey])
     );
 
-    // Build Merkle tree and generate proof
-    const tree = await buildMerkleTree(commitments, poseidon);
+    // Build Merkle tree and generate proof using shared library
+    const merkleTree = new MerkleTree(DEFAULT_MERKLE_DEPTH);
+    await merkleTree.initialize();
+    await merkleTree.initializeFromLeaves(commitments);
 
-    const {
-      proof: merkleProof,
-      indices: merkleIndices,
-      root: merkleRoot,
-    } = await generateMerkleProof(tree, commitmentIndex);
+    const merkleProof = merkleTree.generateProof(commitmentIndex);
 
     // Prepare circuit inputs
     const circuitInputs = {
@@ -172,11 +86,11 @@ async function generateWithdrawalProof(
       new_note_secret_key: newSecretKey.toString(),
 
       // Merkle proof
-      merkle_path_elements: merkleProof.map((p) => p.toString()),
-      merkle_path_indices: merkleIndices.map((i) => i.toString()),
+      merkle_path_elements: merkleProof.pathElements.map((p) => p.toString()),
+      merkle_path_indices: merkleProof.pathIndices.map((i) => i.toString()),
 
       // Public inputs/outputs
-      merkle_root: merkleRoot.toString(),
+      merkle_root: merkleProof.root.toString(),
       withdraw_amount: withdrawAmount.toString(),
       recipient: recipient.toString(),
       relay_fee: relayFee.toString(),
@@ -200,7 +114,7 @@ async function generateWithdrawalProof(
       },
       nullifier: nullifier.toString(),
       newCommitment: newCommitment.toString(),
-      merkleRoot: merkleRoot.toString(),
+      merkleRoot: merkleProof.root.toString(),
       withdrawAmount: withdrawAmount.toString(),
       recipient: recipient.toString(),
       relayFee: relayFee.toString(),

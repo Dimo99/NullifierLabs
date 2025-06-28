@@ -1,0 +1,22 @@
+{
+  "name": "@private-mixer/shared",
+  "version": "1.0.0",
+  "description": "Shared utilities for the Private Mixer project",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": ["merkle", "tree", "cryptography", "zero-knowledge"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "circomlibjs": "^0.1.7"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "@types/node": "^24.0.4"
+  }
+}

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@metamask/sdk": "^0.33.0",
+    "@private-mixer/shared": "file:../shared",
     "circomlibjs": "^0.1.7",
     "ethers": "^6.14.4",
     "next": "15.3.4",
