@@ -171,7 +171,7 @@ export default function Home() {
               </div>
               <h3 className="text-2xl font-semibold mb-4">Deposit</h3>
               <p className="text-slate-300 mb-6">
-                Deposit ETH into the private mixer. You'll receive a secret key to withdraw your funds later.
+                Deposit ETH into the private mixer. You&apos;ll receive a secret key to withdraw your funds later.
               </p>
               <button 
                 onClick={handleStartDeposit}

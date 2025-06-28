@@ -1,4 +1,4 @@
-//@ts-ignore
+//@ts-expect-error circomlibjs doesn't have TypeScript definitions
 import { buildPoseidon } from 'circomlibjs';
 
 // Mouse entropy collector

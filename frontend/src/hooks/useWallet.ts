@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ethers, BrowserProvider, JsonRpcSigner } from 'ethers';
+import { BrowserProvider, JsonRpcSigner } from 'ethers';
 
 interface WalletState {
   account: string | null;
@@ -44,11 +44,11 @@ export function useWallet() {
         isConnecting: false,
         error: null,
       });
-    } catch (error: any) {
+    } catch (error) {
       setWallet(prev => ({
         ...prev,
         isConnecting: false,
-        error: error.message || 'Failed to connect wallet',
+        error: error instanceof Error ? error.message : 'Failed to connect wallet',
       }));
     }
   };
@@ -83,7 +83,7 @@ export function useWallet() {
               error: null,
             });
           }
-        } catch (error) {
+        } catch {
           // Silently fail - user not connected
         }
       }
@@ -95,7 +95,8 @@ export function useWallet() {
   // Listen for account changes
   useEffect(() => {
     if (window.ethereum) {
-      const handleAccountsChanged = (accounts: string[]) => {
+      const handleAccountsChanged = (...args: unknown[]) => {
+        const accounts = args[0] as string[];
         if (accounts.length === 0) {
           disconnectWallet();
         } else {
@@ -107,7 +108,7 @@ export function useWallet() {
       window.ethereum.on('accountsChanged', handleAccountsChanged);
 
       return () => {
-        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        window.ethereum?.removeListener('accountsChanged', handleAccountsChanged);
       };
     }
   }, []);
@@ -123,6 +124,11 @@ export function useWallet() {
 // Type declaration for window.ethereum
 declare global {
   interface Window {
-    ethereum?: any;
+    ethereum?: {
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      on: (event: string, handler: (...args: unknown[]) => void) => void;
+      removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
+      isMetaMask?: boolean;
+    };
   }
 }

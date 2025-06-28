@@ -1,11 +1,11 @@
-//@ts-ignore
-import { buildPoseidon } from "circomlibjs";
-//@ts-ignore
-import * as snarkjs from "snarkjs";
 import * as path from "path";
 import * as fs from "fs";
-import { AbiCoder, encodeRlp } from "ethers";
-import { MerkleTree, DEFAULT_MERKLE_DEPTH } from "@private-mixer/shared";
+import { AbiCoder } from "ethers";
+import {
+  generateWithdrawalProof as generateProof,
+  WithdrawalProofInputs,
+  ProofGenerationConfig
+} from "@private-mixer/shared";
 
 // Find project root dynamically
 function findProjectRoot(): string {
@@ -41,84 +41,29 @@ async function generateWithdrawalProof(
   relayFee: bigint
 ): Promise<any> {
   try {
-    const poseidon = await buildPoseidon();
+    // Use hardcoded change secret key for script (in practice, this would be random)
+    const changeSecretKey = BigInt("999888777666555444");
 
-    // Generate public key from secret key
-    const pubkey = poseidon.F.toString(poseidon([noteSecretKey]));
-
-    // Generate commitment
-    const commitment = BigInt(
-      poseidon.F.toString(poseidon([noteAmount, pubkey]))
-    );
-
-    // Verify the commitment matches what's expected at the given index
-    if (commitments[commitmentIndex] !== commitment) {
-      throw new Error(
-        `Commitment mismatch at index ${commitmentIndex}. Expected: ${commitments[commitmentIndex]}, Got: ${commitment}`
-      );
-    }
-
-    // Generate nullifier
-    const nullifier = poseidon.F.toString(
-      poseidon([noteSecretKey, commitment])
-    );
-
-    // Generate new commitment (for change note)
-    const newSecretKey = BigInt("999888777666555444"); // In practice, this would be random
-    const changeAmount = noteAmount - withdrawAmount - relayFee;
-    const newPubkey = poseidon.F.toString(poseidon([newSecretKey]));
-    const newCommitment = poseidon.F.toString(
-      poseidon([changeAmount, newPubkey])
-    );
-
-    // Build Merkle tree and generate proof using shared library
-    const merkleTree = new MerkleTree(DEFAULT_MERKLE_DEPTH);
-    await merkleTree.initialize();
-    await merkleTree.initializeFromLeaves(commitments);
-
-    const merkleProof = merkleTree.generateProof(commitmentIndex);
-
-    // Prepare circuit inputs
-    const circuitInputs = {
-      // Private inputs
-      note_amount: noteAmount.toString(),
-      note_secret_key: noteSecretKey.toString(),
-      new_note_secret_key: newSecretKey.toString(),
-
-      // Merkle proof
-      merkle_path_elements: merkleProof.pathElements.map((p) => p.toString()),
-      merkle_path_indices: merkleProof.pathIndices.map((i) => i.toString()),
-
-      // Public inputs/outputs
-      merkle_root: merkleProof.root.toString(),
-      withdraw_amount: withdrawAmount.toString(),
-      recipient: recipient.toString(),
-      relay_fee: relayFee.toString(),
+    // Prepare inputs for shared proof generation function
+    const inputs: WithdrawalProofInputs = {
+      noteAmount,
+      noteSecretKey,
+      commitments,
+      commitmentIndex,
+      withdrawAmount,
+      recipient,
+      changeSecretKey,
+      relayFee
     };
 
-    // Generate witness and proof
-    const { proof, publicSignals } = await snarkjs.groth16.fullProve(
-      circuitInputs,
-      WASM_PATH,
-      ZKEY_PATH
-    );
-
-    return {
-      proof: {
-        a: [proof.pi_a[0], proof.pi_a[1]],
-        b: [
-          [proof.pi_b[0][1], proof.pi_b[0][0]],
-          [proof.pi_b[1][1], proof.pi_b[1][0]],
-        ],
-        c: [proof.pi_c[0], proof.pi_c[1]],
-      },
-      nullifier: nullifier.toString(),
-      newCommitment: newCommitment.toString(),
-      merkleRoot: merkleProof.root.toString(),
-      withdrawAmount: withdrawAmount.toString(),
-      recipient: recipient.toString(),
-      relayFee: relayFee.toString(),
+    // Configure paths for Node.js environment
+    const config: ProofGenerationConfig = {
+      wasmPath: WASM_PATH,
+      zkeyPath: ZKEY_PATH
     };
+
+    // Generate proof using shared logic
+    return await generateProof(inputs, config);
   } catch (error) {
     console.error("Error generating withdrawal proof:", error);
     throw error;

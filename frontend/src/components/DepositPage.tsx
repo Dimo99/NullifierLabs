@@ -5,7 +5,6 @@ import { ethers } from 'ethers';
 import { useWallet } from '../hooks/useWallet';
 import { generatePublicKey, encodeSecret, calculateCommitment } from '../utils/crypto';
 import { getPrivateMixerContract } from '../utils/contract';
-import { constrainedMemory } from 'process';
 
 interface DepositPageProps {
   secretKey: string;
@@ -43,8 +42,8 @@ export function DepositPage({ secretKey, onBack, onComplete }: DepositPageProps)
       const comm = await calculateCommitment(amountWei, pubKey);
       console.log("Calculated commitment:", comm);
       setCommitment(comm);
-    } catch (err: any) {
-      setError('Failed to generate keys: ' + err.message);
+    } catch (err) {
+      setError('Failed to generate keys: ' + (err as Error).message);
     }
   };
 
@@ -66,6 +65,7 @@ export function DepositPage({ secretKey, onBack, onComplete }: DepositPageProps)
 
       // Call deposit function with public key
       const amountWei = ethers.parseEther(amount);
+      //@ts-expect-error Contract type doesn't recognize BigInt parameter but it's required for Solidity uint256
       const tx = await contractWithSigner.deposit(BigInt("0x"+publicKey), {
         value: amountWei
       });
@@ -84,18 +84,10 @@ export function DepositPage({ secretKey, onBack, onComplete }: DepositPageProps)
       } else {
         throw new Error('Transaction failed');
       }
-    } catch (err: any) {
-      setError('Deposit failed: ' + (err.reason || err.message));
+    } catch (err) {
+      setError('Deposit failed: ' + (err as Error).message);
       setIsDepositing(false);
       setStep('confirm');
-    }
-  };
-
-  const formatAmount = (wei: string) => {
-    try {
-      return ethers.formatEther(wei);
-    } catch {
-      return '0';
     }
   };
 
@@ -166,9 +158,9 @@ export function DepositPage({ secretKey, onBack, onComplete }: DepositPageProps)
             <h4 className="text-sm font-semibold text-slate-300 mb-2">What happens next?</h4>
             <ul className="text-xs text-slate-400 space-y-1">
               <li>• Your deposit will be added to the private pool</li>
-              <li>• You'll receive an encoded secret to withdraw later</li>
+              <li>• You&apos;ll receive an encoded secret to withdraw later</li>
               <li>• No one can link your deposit to future withdrawals</li>
-              <li>• Keep your secret safe - it's your only way to withdraw</li>
+              <li>• Keep your secret safe - it&apos;s your only way to withdraw</li>
             </ul>
           </div>
         </div>
@@ -224,7 +216,7 @@ export function DepositPage({ secretKey, onBack, onComplete }: DepositPageProps)
               <div>
                 <p className="text-yellow-300 text-sm font-medium">Important</p>
                 <p className="text-yellow-200 text-xs mt-1">
-                  After deposit, you'll receive an encoded secret. Save it securely - it's your only way to withdraw funds.
+                  After deposit, you&apos;ll receive an encoded secret. Save it securely - it&apos;s your only way to withdraw funds.
                 </p>
               </div>
             </div>

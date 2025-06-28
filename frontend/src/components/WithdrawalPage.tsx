@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ethers } from 'ethers';
 
 import { calculateCommitment, decodeSecret, generatePublicKey, encodeSecret } from '../utils/crypto';
 import { SecretGenerator } from './SecretGenerator';
 import { SecretDisplay } from './SecretDisplay';
 import { generateWithdrawalProof } from '../utils/proofGeneration';
+import { WithdrawalProofResult } from '@private-mixer/shared';
 import { useWallet } from '../hooks/useWallet';
 import { getPrivateMixerContract } from '../utils/contract';
 
@@ -27,17 +28,15 @@ export function WithdrawalPage() {
   const [secretHex, setSecretHex] = useState('');
   const [decodedSecret, setDecodedSecret] = useState<DecodedSecret | null>(null);
   const [merkleTreeData, setMerkleTreeData] = useState<MerkleTreeData | null>(null);
-  const [noteExists, setNoteExists] = useState<boolean | null>(null);
   const [leafIndex, setLeafIndex] = useState<number | null>(null);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [recipient, setRecipient] = useState('');
-  const [isGeneratingProof, setIsGeneratingProof] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState<'input' | 'verify' | 'withdraw' | 'generating_secret' | 'generating' | 'proof_ready' | 'submitting' | 'success'>('input');
   const [showSecretGenerator, setShowSecretGenerator] = useState(false);
   const [changeSecretKey, setChangeSecretKey] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
-  const [generatedProof, setGeneratedProof] = useState<any>(null);
+  const [generatedProof, setGeneratedProof] = useState<WithdrawalProofResult | null>(null);
   const [isSubmittingTx, setIsSubmittingTx] = useState(false);
 
   // Fetch Merkle tree from backend
@@ -109,7 +108,6 @@ export function WithdrawalPage() {
       console.log("decoded amount:", decoded.amount);
       const verification = await verifyNoteExists(decoded.secretKey, decoded.amount, treeData);
       console.log("Verification result:", verification);
-      setNoteExists(verification.exists);
       setLeafIndex(verification.leafIndex);
 
       if (verification.exists) {
@@ -117,9 +115,9 @@ export function WithdrawalPage() {
       } else {
         setError('Note not found in Merkle tree. Please check your secret key.');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error processing secret:', error);
-      setError(error.message || 'Invalid secret key format');
+      setError(error instanceof Error ? error.message : 'Invalid secret key format');
     }
   };
 
@@ -161,10 +159,9 @@ export function WithdrawalPage() {
         await generateProof(null);
       }
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error submitting withdrawal:', error);
-      setError(error.message || 'Withdrawal failed');
-      setIsGeneratingProof(false);
+      setError(error instanceof Error ? error.message : 'Withdrawal failed');
     }
   };
 
@@ -188,7 +185,6 @@ export function WithdrawalPage() {
   const generateProof = async (changeSecret: string | null) => {
     try {
       setStep('generating');
-      setIsGeneratingProof(true);
       setError('');
 
       if (!decodedSecret || !merkleTreeData || leafIndex === null) {
@@ -225,12 +221,10 @@ export function WithdrawalPage() {
       // Store the proof and move to proof_ready step
       setGeneratedProof(proofResult);
       setStep('proof_ready');
-      setIsGeneratingProof(false);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error generating proof:', error);
-      setError(error.message || 'Proof generation failed');
-      setIsGeneratingProof(false);
+      setError(error instanceof Error ? error.message : 'Proof generation failed');
       setStep('verify');
     }
   };
@@ -265,6 +259,7 @@ export function WithdrawalPage() {
         generatedProof.relayFee );
 
       // Submit withdrawal transaction
+      //@ts-expect-error Contract type doesn't recognize proof array format but it's required for Groth16 verification
       const tx = await contractWithSigner.withdraw(
         generatedProof.proof.a, // a
         generatedProof.proof.b, // b
@@ -292,9 +287,9 @@ export function WithdrawalPage() {
         throw new Error('Transaction failed');
       }
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error submitting transaction:', error);
-      setError(error.message || 'Transaction submission failed');
+      setError(error instanceof Error ? error.message : 'Transaction submission failed');
       setIsSubmittingTx(false);
       setStep('proof_ready');
     }
